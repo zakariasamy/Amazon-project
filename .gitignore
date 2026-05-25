@@ -1,0 +1,34 @@
+# Laravel Backend
+backend-laravel8/.env
+backend-laravel8/vendor/
+backend-laravel8/node_modules/
+backend-laravel8/storage/*.key
+backend-laravel8/storage/logs/
+backend-laravel8/storage/framework/cache/*
+backend-laravel8/storage/framework/sessions/*
+backend-laravel8/storage/framework/views/*
+backend-laravel8/.phpunit.result.cache
+
+# Chrome Extension
+chrome-extension/node_modules/
+chrome-extension/dist/
+chrome-extension/.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+composer-error.log

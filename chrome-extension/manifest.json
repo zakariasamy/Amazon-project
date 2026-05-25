@@ -1,0 +1,81 @@
+{
+  "manifest_version": 3,
+  "name": "Amazon Product Analyzer",
+  "version": "1.0.0",
+  "description": "Professional Amazon product analytics with Helium 10-level insights",
+  "permissions": [
+    "storage",
+    "cookies",
+    "activeTab",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://www.amazon.com/*",
+    "https://www.amazon.eg/*",
+    "https://www.amazon.co.uk/*",
+    "https://www.amazon.de/*",
+    "https://www.amazon.ca/*",
+    "https://completion.amazon.com/*",
+    "http://localhost:8000/*",
+    "http://127.0.0.1:8000/*"
+  ],
+  "action": {
+    "default_popup": "src/popup/login.html",
+    "default_icon": {
+      "16": "public/icon128.png",
+      "48": "public/icon128.png",
+      "128": "public/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "public/icon128.png",
+    "48": "public/icon128.png",
+    "128": "public/icon128.png"
+  },
+  "background": {
+    "service_worker": "src/background/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.amazon.com/*",
+        "https://www.amazon.eg/*"
+      ],
+      "js": [
+        "src/api/api-client.js",
+        "src/api/keywords.js",
+        "src/engine/product-parser.js",
+        "src/engine/serp-parser.js",
+        "src/engine/market-constants.js",
+        "src/engine/data-scraper.js",
+        "src/engine/intelligence-engine.js",
+        "src/api/reverse-asin.js",
+        "src/api/magnet-analyzer.js",
+        "src/api/cerebro-analyzer.js",
+        "src/ui/shadow-ui.js",
+        "src/ui/cerebro-ui.js",
+        "src/ui/magnet-ui.js",
+        "src/content/content-script.js"
+      ],
+      "css": [
+        "src/content/content-styles.css",
+        "src/ui/shadow-ui.css"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/ui/*",
+        "src/engine/*",
+        "src/api/*",
+        "public/*"
+      ],
+      "matches": [
+        "https://www.amazon.com/*",
+        "https://www.amazon.eg/*"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+/* Content Script Styles - Floating Analyzer Button - Amazon Theme */
+.amazon-analyzer-floating-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 999999;
+    background: #FF9900;
+    color: #232F3E;
+    padding: 15px 25px;
+    border-radius: 50px;
+    box-shadow: 0 4px 20px rgba(255, 153, 0, 0.4);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Amazon Ember', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-weight: 700;
+}
+
+.amazon-analyzer-floating-btn:hover {
+    background: #FEBD69;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 25px rgba(255, 153, 0, 0.5);
+}
+
+.amazon-analyzer-floating-btn:active {
+    transform: translateY(-1px);
+}
+
+/* Keywords Button - Secondary Action */
+.amazon-analyzer-keywords-btn {
+    position: fixed;
+    bottom: 95px;
+    /* Above Analyze button */
+    right: 30px;
+    z-index: 999999;
+    background: #232F3E;
+    /* Dark Amazon Blue */
+    color: #FFFFFF;
+    padding: 12px 20px;
+    border-radius: 50px;
+    box-shadow: 0 4px 15px rgba(35, 47, 62, 0.4);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Amazon Ember', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.amazon-analyzer-keywords-btn:hover {
+    background: #37475A;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(35, 47, 62, 0.5);
+}
+
+.analyzer-btn-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.analyzer-icon {
+    font-size: 18px;
+}
+
+.analyzer-text {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+/* Pulse animation for attention */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 4px 20px rgba(255, 153, 0, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 4px 30px rgba(255, 153, 0, 0.7);
+    }
+
+    100% {
+        box-shadow: 0 4px 20px rgba(255, 153, 0, 0.4);
+    }
+}
+
+.amazon-analyzer-floating-btn.pulse {
+    animation: pulse 2s infinite;
+}

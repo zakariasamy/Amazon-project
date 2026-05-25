@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon Analyzer - Login</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-header">
+            <h1>🔍 Amazon Product Analyzer</h1>
+            <p>Professional analytics for Amazon sellers</p>
+        </div>
+
+        <!-- Login Form -->
+        <div id="loginForm" class="auth-form">
+            <h2>Welcome Back</h2>
+            <input type="email" id="loginEmail" placeholder="Email" required autocomplete="email">
+            <input type="password" id="loginPassword" placeholder="Password" required autocomplete="current-password">
+            <button id="loginBtn" class="btn-primary">Login</button>
+            <div class="form-footer">
+                <a href="#" id="showRegister">Create account</a>
+                <a href="#" id="forgotPassword">Forgot password?</a>
+            </div>
+        </div>
+
+        <!-- Register Form -->
+        <div id="registerForm" class="auth-form hidden">
+            <h2>Create Account</h2>
+            <input type="text" id="registerName" placeholder="Full Name" required autocomplete="name">
+            <input type="email" id="registerEmail" placeholder="Email" required autocomplete="email">
+            <input type="password" id="registerPassword" placeholder="Password (min 8 characters)" required autocomplete="new-password">
+            <input type="password" id="registerPasswordConfirm" placeholder="Confirm Password" required autocomplete="new-password">
+            <button id="registerBtn" class="btn-primary">Create Account</button>
+            <div class="form-footer">
+                <a href="#" id="showLogin">Already have an account?</a>
+            </div>
+        </div>
+
+        <!-- Message Display -->
+        <div id="message" class="message"></div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <script type="module" src="auth.js"></script>
+</body>
+</html>

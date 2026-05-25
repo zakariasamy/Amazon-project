@@ -1,0 +1,1190 @@
+/* Shadow UI Panel Styles - Amazon Theme */
+.analyzer-shadow-panel {
+    position: fixed;
+    top: 60px;
+    right: -950px;
+    width: 900px;
+    max-width: 90vw;
+    max-height: calc(100vh - 80px);
+    background: linear-gradient(135deg, #232F3E 0%, #131A22 100%);
+    border-radius: 16px 0 0 16px;
+    box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
+    z-index: 999998;
+    font-family: 'Amazon Ember', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #333;
+    overflow: hidden;
+    transition: right 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+    border-left: 3px solid #FF9900;
+}
+
+.analyzer-shadow-panel.visible {
+    right: 0;
+}
+
+.analyzer-shadow-panel.minimized {
+    right: -950px;
+}
+
+.analyzer-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 25px;
+    background: #FF9900;
+    border-bottom: none;
+}
+
+.analyzer-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: white;
+}
+
+.analyzer-logo .analyzer-icon {
+    font-size: 24px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.analyzer-logo .analyzer-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0;
+    color: #232F3E;
+}
+
+.analyzer-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.analyzer-action-btn {
+    background: rgba(35, 47, 62, 0.2);
+    border: 1px solid rgba(35, 47, 62, 0.2);
+    color: #232F3E;
+    font-size: 18px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+
+.analyzer-action-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.analyzer-close-btn:hover {
+    background: rgba(255, 59, 48, 0.8);
+    border-color: rgba(255, 59, 48, 0.8);
+    transform: rotate(90deg) scale(1.1);
+}
+
+/* Restore Handle (Floating Button) - Amazon Theme */
+.analyzer-restore-handle {
+    position: fixed;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 56px;
+    background: #FF9900;
+    border-radius: 8px 0 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: -4px 4px 15px rgba(0, 0, 0, 0.3);
+    z-index: 999997;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.analyzer-restore-handle:hover {
+    width: 56px;
+    background: #FEBD69;
+    box-shadow: -6px 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.analyzer-restore-handle .analyzer-icon {
+    font-size: 22px;
+    color: #232F3E;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.analyzer-panel-body {
+    max-height: 600px;
+    overflow-y: auto;
+    padding: 20px;
+    background: #1e2433;
+}
+
+.analyzer-panel-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.analyzer-panel-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.analyzer-panel-body::-webkit-scrollbar-thumb {
+    background: #FF9900;
+    border-radius: 3px;
+}
+
+/* Improved Section Styles - Dark Theme */
+.analyzer-section {
+    margin-bottom: 16px;
+    padding: 18px 20px;
+    background: #2a3142;
+    border-radius: 10px;
+    border: 1px solid #3d4656;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+}
+
+.analyzer-section:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    border-color: #4a5568;
+}
+
+/* Two Column Grid for Competition + Assessment */
+.analyzer-two-col-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.analyzer-two-col-grid .analyzer-section {
+    margin-bottom: 0;
+    height: 100%;
+}
+
+.analyzer-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    margin: 0 0 14px 0;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-bottom: 1px solid #3d4656;
+    padding-bottom: 10px;
+}
+
+/* Product Section Styles */
+.analyzer-product-section {
+    background: linear-gradient(135deg, #2a3142 0%, #232a38 100%);
+    border-left: 3px solid #FF9900;
+    border-radius: 10px;
+}
+
+.analyzer-product-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #f3f4f6;
+    line-height: 1.5;
+}
+
+/* Metrics Grid - 4 columns */
+.analyzer-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.analyzer-metric {
+    text-align: center;
+    padding: 14px 10px;
+    background: #1e2433;
+    border-radius: 8px;
+    border: 1px solid #3d4656;
+    transition: all 0.2s;
+}
+
+.analyzer-metric:hover {
+    background: #252d3d;
+    border-color: #4a5568;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+}
+
+.analyzer-metric-label {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.analyzer-metric-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #f8fafc;
+    margin-bottom: 4px;
+}
+
+.analyzer-metric-sublabel {
+    font-size: 11px;
+    color: #64748b;
+}
+
+.analyzer-confidence-high {
+    color: #34d399 !important;
+}
+
+.analyzer-confidence-medium {
+    color: #ffc107 !important;
+}
+
+.analyzer-confidence-low {
+    color: #ff9800 !important;
+}
+
+.analyzer-confidence-very_low {
+    color: #dc3545 !important;
+}
+
+.analyzer-profit-excellent {
+    color: #34d399 !important;
+}
+
+.analyzer-profit-good {
+    color: #4ade80 !important;
+}
+
+.analyzer-profit-acceptable {
+    color: #ff9800 !important;
+}
+
+.analyzer-profit-poor {
+    color: #dc3545 !important;
+}
+
+.analyzer-competition-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.analyzer-competition-level {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 12px;
+}
+
+.analyzer-comp-very_low {
+    background: rgba(52, 211, 153, 0.15);
+    color: #34d399;
+}
+
+.analyzer-comp-low {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.analyzer-comp-medium {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.analyzer-comp-high {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.analyzer-comp-very_high {
+    background: #dc3545;
+    color: white;
+}
+
+.analyzer-competition-score {
+    font-size: 12px;
+    font-weight: 600;
+    color: #9ca3af;
+}
+
+.analyzer-competition-details {
+    font-size: 11px;
+    color: #6b7280;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.analyzer-warning {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.analyzer-opportunity-section {
+    background: linear-gradient(135deg, rgba(255, 153, 0, 0.1) 0%, rgba(254, 189, 105, 0.1) 100%);
+}
+
+.analyzer-opportunity-score {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.analyzer-score-circle {
+    width: 80px;
+    height: 80px;
+}
+
+.analyzer-circular-chart {
+    display: block;
+    margin: 10px auto;
+    max-width: 80%;
+    max-height: 80px;
+}
+
+.circle-bg {
+    fill: none;
+    stroke: #eee;
+    stroke-width: 3.8;
+}
+
+.circle {
+    fill: none;
+    stroke: #FF9900;
+    stroke-width: 3.8;
+    stroke-linecap: round;
+    animation: progress 1s ease-out forwards;
+}
+
+@keyframes progress {
+    0% {
+        stroke-dasharray: 0 100;
+    }
+}
+
+.analyzer-opp-excellent .circle {
+    stroke: #34d399;
+}
+
+.analyzer-opp-good .circle {
+    stroke: #4ade80;
+}
+
+.analyzer-opp-fair .circle {
+    stroke: #ffc107;
+}
+
+.analyzer-opp-poor .circle {
+    stroke: #dc3545;
+}
+
+.percentage {
+    fill: #666;
+    font-family: sans-serif;
+    font-size: 8px;
+    font-weight: 700;
+    text-anchor: middle;
+}
+
+.analyzer-score-details {
+    flex: 1;
+}
+
+.analyzer-score-rating {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.analyzer-opp-excellent .analyzer-score-rating {
+    color: #34d399;
+}
+
+.analyzer-opp-good .analyzer-score-rating {
+    color: #4ade80;
+}
+
+.analyzer-opp-fair .analyzer-score-rating {
+    color: #ffc107;
+}
+
+.analyzer-opp-poor .analyzer-score-rating {
+    color: #dc3545;
+}
+
+.analyzer-score-recommendation {
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+}
+
+.analyzer-insights {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.analyzer-insight {
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.4;
+    font-weight: 500;
+}
+
+.analyzer-insight-success {
+    background: rgba(52, 211, 153, 0.1);
+    color: #34d399;
+    border-left: 3px solid #34d399;
+}
+
+.analyzer-insight-warning {
+    background: #fff3cd;
+    color: #856404;
+    border-left: 3px solid #ffc107;
+}
+
+.analyzer-insight-danger {
+    background: #f8d7da;
+    color: #721c24;
+    border-left: 3px solid #dc3545;
+}
+
+.analyzer-panel-footer {
+    display: flex;
+    gap: 10px;
+    padding: 15px 20px;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+.analyzer-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.analyzer-btn-primary {
+    background: #FF9900;
+    color: #232F3E;
+    font-weight: 700;
+}
+
+.analyzer-btn-primary:hover {
+    background: #FEBD69;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 153, 0, 0.4);
+}
+
+.analyzer-btn-secondary {
+    background: white;
+    color: #232F3E;
+    border: 2px solid #FF9900;
+}
+
+.analyzer-btn-secondary:hover {
+    background: #FF9900;
+    color: #232F3E;
+}
+
+/* Keyword Discovery Section - Premium Redesign */
+.analyzer-keyword-section {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(15, 23, 42, 0.2) 100%);
+}
+
+.keyword-info {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 10px;
+}
+
+.keyword-results {
+    margin-top: 10px;
+    padding: 14px;
+    background: #1e293b;
+    border-radius: 12px;
+    border: 1px solid #334155;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.keyword-loading {
+    text-align: center;
+    padding: 20px;
+    color: #f59e0b;
+    font-weight: 600;
+}
+
+.keyword-error {
+    color: #ef4444;
+    padding: 10px;
+    text-align: center;
+}
+
+.keyword-empty {
+    color: #94a3b8;
+    padding: 10px;
+    text-align: center;
+    font-style: italic;
+}
+
+.keyword-summary {
+    font-size: 13px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #334155;
+    color: #f8fafc;
+}
+
+.keyword-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.keyword-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.keyword-item.sponsored {
+    background: rgba(255, 153, 0, 0.1);
+    border-left: 3px solid #FF9900;
+}
+
+.keyword-text {
+    color: #232F3E;
+    font-weight: 500;
+}
+
+.keyword-position {
+    color: #FF9900;
+    font-weight: 700;
+    font-size: 11px;
+}
+
+/* Reverse ASIN Table Styles - Professional Dark Theme */
+.ra-header {
+    background: linear-gradient(135deg, #1a2332 0%, #232f3e 100%);
+    padding: 16px 20px;
+    border-radius: 10px 10px 0 0;
+    border-bottom: 2px solid #ff9900;
+}
+
+.ra-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.ra-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.ra-count {
+    font-size: 12px;
+    color: #9ca3af;
+    background: rgba(255, 153, 0, 0.15);
+    padding: 4px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 153, 0, 0.3);
+}
+
+.ra-filters {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.ra-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ra-filter-group label {
+    font-size: 10px;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ra-filter-group select,
+.ra-filter-group input[type="number"] {
+    background: #1e2433;
+    border: 1px solid #37475a;
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    width: 90px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ra-filter-group input[type="number"] {
+    cursor: text;
+}
+
+.ra-filter-group input[type="number"]::placeholder {
+    color: #6b7280;
+}
+
+.ra-filter-group select:hover,
+.ra-filter-group input[type="number"]:hover {
+    border-color: #ff9900;
+}
+
+.ra-filter-group select:focus,
+.ra-filter-group input[type="number"]:focus {
+    outline: none;
+    border-color: #ff9900;
+    box-shadow: 0 0 0 2px rgba(255, 153, 0, 0.2);
+}
+
+/* Hide number input spinners */
+.ra-filter-group input[type="number"]::-webkit-outer-spin-button,
+.ra-filter-group input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+}
+
+.ra-filter-group input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.ra-table-container {
+    max-height: 500px;
+    overflow: auto;
+    /* Enable both scrollbars */
+    background: #1e2433;
+    border: 1px solid #37475a;
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    box-shadow: inset 0 -4px 12px rgba(0, 0, 0, 0.2);
+
+    /* Firefox Scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: #37475a #1a2332;
+}
+
+/* Custom Scrollbar for Webkit */
+.ra-table-container::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.ra-table-container::-webkit-scrollbar-track {
+    background: #1a2332;
+    border-radius: 0 0 10px 10px;
+}
+
+.ra-table-container::-webkit-scrollbar-thumb {
+    background: #37475a;
+    border-radius: 5px;
+    border: 2px solid #1a2332;
+}
+
+.ra-table-container::-webkit-scrollbar-thumb:hover {
+    background: #485769;
+    border-color: #1a2332;
+}
+
+.ra-table-container::-webkit-scrollbar-corner {
+    background: #1a2332;
+}
+
+.ra-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    color: #e5e7eb;
+    table-layout: fixed;
+}
+
+.ra-table thead {
+    position: sticky;
+    top: 0;
+    background: #1a2332;
+    z-index: 1;
+}
+
+.ra-table th {
+    padding: 15px 12px;
+    text-align: center;
+    font-weight: 700;
+    color: #febd69;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-bottom: 1px solid #ff9900;
+    background: #1a2332;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+}
+
+.ra-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s;
+}
+
+.ra-table th.sortable:hover {
+    background: #2a3847;
+    color: #fff;
+}
+
+.ra-table th.sortable::after {
+    content: '⇅';
+    margin-left: 4px;
+    opacity: 0.4;
+    font-size: 9px;
+}
+
+.ra-table th.sorted-asc::after {
+    content: '↑';
+    opacity: 1;
+    color: #ff9900;
+}
+
+.ra-table th.sorted-desc::after {
+    content: '↓';
+    opacity: 1;
+    color: #ff9900;
+}
+
+/* Column widths for alignment */
+.col-keyword {
+    width: 28%;
+    text-align: left !important;
+    padding-left: 16px !important;
+}
+
+.col-rank {
+    width: 8%;
+    text-align: center;
+}
+
+.col-volume {
+    width: 10%;
+    text-align: center;
+}
+
+.col-kd {
+    width: 8%;
+    text-align: center;
+}
+
+.col-sales {
+    width: 10%;
+    text-align: center;
+}
+
+.col-ads {
+    width: 8%;
+    text-align: center;
+}
+
+.col-price {
+    width: 8%;
+    text-align: center;
+}
+
+.col-bsr {
+    width: 20%;
+    text-align: center;
+}
+
+.ra-table td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(55, 71, 90, 0.5);
+    font-size: 12px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+/* Keyword column styling */
+.ra-table td.col-keyword {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+    color: #fff;
+}
+
+/* Data column colors */
+.ra-table td.col-rank {
+    font-weight: 700;
+    color: #febd69;
+}
+
+.ra-table td.col-volume {
+    color: #4ade80;
+    font-weight: 700;
+}
+
+.ra-table td.col-kd {
+    font-weight: 700;
+}
+
+.ra-table td.col-sales {
+    color: #facc15;
+    font-weight: 600;
+}
+
+.ra-table td.col-ads {
+    color: #fb923c;
+    font-weight: 600;
+}
+
+.ra-table td.col-price {
+    color: #10b981;
+    font-weight: 500;
+}
+
+/* Zebra striping for professional look */
+.ra-table tbody tr:nth-child(even) {
+    background-color: #1e2433;
+}
+
+.ra-table tbody tr:nth-child(odd) {
+    background-color: #242d3d;
+}
+
+.ra-table tr:hover {
+    background-color: rgba(255, 153, 0, 0.15) !important;
+    transition: background 0.1s ease-in-out;
+}
+
+.ra-row-notfound .ra-keyword {
+    color: #9ca3af;
+}
+
+/* Seller Feedback Section - Premium Slate Dark Redesign */
+.analyzer-feedback-section {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(15, 23, 42, 0.2) 100%) !important;
+}
+
+.feedback-info {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.feedback-form {
+    background: #1e293b;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid #334155;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.feedback-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.feedback-row label {
+    font-size: 12px;
+    color: #cbd5e1;
+    min-width: 110px;
+    font-weight: 500;
+}
+
+.feedback-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #f59e0b;
+}
+
+.feedback-input {
+    flex: 1;
+    padding: 8px 12px;
+    background: #0f172a !important;
+    border: 1px solid #475569 !important;
+    border-radius: 6px;
+    font-size: 13px;
+    max-width: 120px;
+    color: #f8fafc !important;
+    transition: all 0.2s;
+}
+
+.feedback-input:focus {
+    outline: none;
+    border-color: #f59e0b !important;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2) !important;
+}
+
+.feedback-hint {
+    font-size: 11px;
+    color: #64748b !important;
+}
+
+.feedback-btn {
+    width: 100%;
+    margin-top: 5px;
+}
+
+.feedback-message {
+    margin-top: 10px;
+    font-size: 12px;
+    text-align: center;
+}
+
+.feedback-message .success {
+    color: #34d399;
+}
+
+.feedback-message .error {
+    color: #dc3545;
+}
+
+.feedback-message .pending {
+    color: #FF9900;
+}
+
+/* ========== Dark Theme Additions ========== */
+
+/* Quick Stats Row */
+.analyzer-quick-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin: 14px 0;
+    padding: 12px 0;
+    border-top: 1px solid #3d4656;
+    border-bottom: 1px solid #3d4656;
+}
+
+.analyzer-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.stat-label {
+    font-size: 9px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+.stat-value {
+    font-size: 13px;
+    color: #e5e7eb;
+    font-weight: 600;
+}
+
+.stat-price {
+    color: #10b981 !important;
+}
+
+.stat-bsr {
+    color: #f59e0b !important;
+}
+
+/* Info Chips Row */
+.analyzer-info-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.info-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #1e2433;
+    border: 1px solid #3d4656;
+    border-radius: 6px;
+    font-size: 11px;
+    color: #9ca3af;
+}
+
+/* BSR List */
+.analyzer-bsr-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.bsr-chip {
+    padding: 3px 8px;
+    background: #1e2433;
+    border: 1px solid #3d4656;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #6b7280;
+}
+
+.bsr-chip.primary {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #f59e0b;
+}
+
+/* Fee Breakdown */
+.fee-breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 10px 12px;
+    background: #1e2433;
+    border-radius: 6px;
+    margin-top: 12px;
+    font-size: 11px;
+    color: #9ca3af;
+}
+
+/* COGS Input Row */
+.cogs-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.cogs-input-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cogs-input-group label {
+    font-size: 11px;
+    color: #9ca3af;
+    font-weight: 500;
+}
+
+.cogs-input-group input {
+    width: 90px;
+    padding: 8px 12px;
+    background: #1e2433 !important;
+    border: 1px solid #4a5568 !important;
+    border-radius: 6px;
+    color: #10b981 !important;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.cogs-input-group input::placeholder {
+    color: #6b7280;
+}
+
+.cogs-input-group input:focus {
+    outline: none;
+    border-color: #FF9900 !important;
+    box-shadow: 0 0 0 2px rgba(255, 153, 0, 0.2);
+}
+
+.cogs-input-group span {
+    font-size: 12px;
+    color: #9ca3af;
+    font-weight: 500;
+}
+
+/* Estimate Badge */
+.estimate-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border-radius: 4px;
+    font-weight: 500;
+    margin-left: 6px;
+}
+
+/* Seller Feedback Section */
+.feedback-section {
+    background: #1e2433 !important;
+}
+
+.feedback-grid {
+    background: #252d3d;
+    border-color: #3d4656;
+}
+
+.feedback-input {
+    background: #1e2433 !important;
+    border-color: #3d4656 !important;
+    color: #f3f4f6 !important;
+}
+
+.feedback-hint {
+    color: #6b7280 !important;
+}
+
+/* Competition Bar */
+.analyzer-competition-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: #1e2433;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.analyzer-competition-level {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+}
