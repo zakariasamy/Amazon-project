@@ -177,9 +177,32 @@ class CerebroUI {
      * Initialize Cerebro UI on search page
      * Injects checkboxes on product rows and adds floating selection bar
      */
-    async initOnSearchPage() {
+    async initOnSearchPage(settings = null) {
         console.log('[Cerebro] Initializing on search page');
-        
+
+        // If settings weren't passed, fetch them asynchronously
+        if (!settings) {
+            try {
+                const baseUrl = this.getBackendBaseUrl();
+                const response = await fetch(`${baseUrl}/api/settings?_t=${Date.now()}`);
+                if (response.ok) {
+                    const configData = await response.json();
+                    settings = configData.settings || {};
+                }
+            } catch (e) {
+                console.warn('[Cerebro] Failed to fetch settings:', e);
+            }
+        }
+
+        const isKeywordAnalyzerEnabled = settings && settings.feature_keyword_analyzer_pro_enabled !== undefined
+            ? (settings.feature_keyword_analyzer_pro_enabled === true || settings.feature_keyword_analyzer_pro_enabled === 'true' || settings.feature_keyword_analyzer_pro_enabled === 1 || settings.feature_keyword_analyzer_pro_enabled === '1')
+            : true;
+
+        if (!isKeywordAnalyzerEnabled) {
+            console.log('[Cerebro] Competitor Keyword Analyzer is disabled by admin setting.');
+            return;
+        }
+
         // 1. Create selection bar first so it's ready
         this.createSelectionBar();
         
@@ -189,27 +212,18 @@ class CerebroUI {
         // 3. Inject checkboxes immediately (without waiting for settings, to ensure fast UI)
         this.injectProductCheckboxes();
         
-        // 4. Fetch settings asynchronously to check for test mode and auto-select
-        try {
-            const baseUrl = this.getBackendBaseUrl();
-            const response = await fetch(`${baseUrl}/api/settings`);
-            if (response.ok) {
-                const configData = await response.json();
-                const settings = configData.settings || {};
+        // 4. Handle test mode and auto-select
+        if (settings) {
+            this.testModeEnabled = this.parseBooleanSetting(settings.test_mode_enabled, false);
+            this.testModeProductUrl = settings.test_mode_product_url || '';
+            
+            if (this.testModeEnabled && this.testModeProductUrl) {
+                this.testAsin = this.parseAsinFromUrl(this.testModeProductUrl);
+                console.log(`[Cerebro] Test Mode Active: Auto-selecting test ASIN ${this.testAsin}`);
                 
-                this.testModeEnabled = this.parseBooleanSetting(settings.test_mode_enabled, false);
-                this.testModeProductUrl = settings.test_mode_product_url || '';
-                
-                if (this.testModeEnabled && this.testModeProductUrl) {
-                    this.testAsin = this.parseAsinFromUrl(this.testModeProductUrl);
-                    console.log(`[Cerebro] Test Mode Active: Auto-selecting test ASIN ${this.testAsin}`);
-                    
-                    // Trigger auto-selection on any already injected checkbox
-                    this.autoSelectTestProduct();
-                }
+                // Trigger auto-selection on any already injected checkbox
+                this.autoSelectTestProduct();
             }
-        } catch (e) {
-            console.warn('[Cerebro] Failed to fetch settings for test mode:', e);
         }
     }
 

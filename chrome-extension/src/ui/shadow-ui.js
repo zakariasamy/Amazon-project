@@ -994,62 +994,89 @@ class ShadowUI {
 
       // Display comprehensive results table (ALL keywords)
       const allKeywords = results.allKeywords || results.keywords || [];
-      const summary = results.analysisSummary || {
-        total_keywords: allKeywords.length,
-        keywords_found: results.keywordsFound || 0,
-        keywords_not_found: allKeywords.length - (results.keywordsFound || 0),
-        gaps_identified: 0
-      };
+      const totalKw = allKeywords.length;
+      const avgVol = totalKw > 0 ? Math.round(allKeywords.reduce((s, k) => s + (k.estimated_volume || 0), 0) / totalKw) : 0;
+      const avgKd  = totalKw > 0 ? Math.round(allKeywords.reduce((s, k) => s + (k.difficulty_score || 0), 0) / totalKw) : 0;
+      const ranked = allKeywords.filter(k => k.position && k.position > 0).length;
+
+      const fmtVol = v => { if (!v) return '0'; if (v >= 1000000) return (v/1000000).toFixed(1)+'M'; if (v >= 1000) return (v/1000).toFixed(1)+'K'; return v.toLocaleString(); };
 
       resultsDiv.innerHTML = `
-        <div class="ra-header">
-          <div class="ra-title-row">
-            <span class="ra-title">📊 Keyword Analysis</span>
-            <span class="ra-count">${summary.total_keywords} keywords analyzed</span>
-          </div>
-          <div class="ra-filters">
-            <div class="ra-filter-group">
-              <label>Min Volume</label>
-              <input type="number" id="filter-min-volume" placeholder="0" min="0" value="">
+        <div style="font-family:'Inter',-apple-system,system-ui,sans-serif;">
+
+          <!-- Summary Stats -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#374151;border-radius:10px;overflow:hidden;margin-bottom:12px;">
+            <div style="background:#1e293b;padding:14px 16px;text-align:center;">
+              <div style="color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">🔑 Keywords</div>
+              <div style="color:#fff;font-size:22px;font-weight:700;">${totalKw}</div>
             </div>
-            <div class="ra-filter-group">
-              <label>Max Volume</label>
-              <input type="number" id="filter-max-volume" placeholder="∞" min="0" value="">
+            <div style="background:#1e293b;padding:14px 16px;text-align:center;">
+              <div style="color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">📈 Ranked</div>
+              <div style="color:#10b981;font-size:22px;font-weight:700;">${ranked}</div>
             </div>
-            <div class="ra-filter-group">
-              <label>Max Ads</label>
-              <input type="number" id="filter-max-ads" placeholder="∞" min="0" max="60" value="">
+            <div style="background:#1e293b;padding:14px 16px;text-align:center;">
+              <div style="color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">🔍 Avg Volume</div>
+              <div style="color:#60a5fa;font-size:22px;font-weight:700;">${fmtVol(avgVol)}</div>
             </div>
-            <div class="ra-filter-group">
-              <label>Max KD</label>
-              <select id="filter-max-kd">
-                <option value="100">All</option>
-                <option value="30">Easy (≤30)</option>
-                <option value="50">Medium (≤50)</option>
-                <option value="70">Hard (≤70)</option>
-              </select>
+            <div style="background:#1e293b;padding:14px 16px;text-align:center;">
+              <div style="color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">🔥 Avg KD</div>
+              <div style="color:${avgKd>=70?'#f87171':avgKd>=50?'#fb923c':avgKd>=30?'#facc15':'#4ade80'};font-size:22px;font-weight:700;">${avgKd}</div>
             </div>
           </div>
-        </div>
-        <div class="ra-table-container">
-          <table class="ra-table">
-            <thead>
-              <tr>
-                <th class="sortable col-keyword" data-sort="keyword">Keyword</th>
-                <th class="sortable col-rank" data-sort="position">Rank</th>
-                <th class="sortable col-volume" data-sort="estimated_volume">Volume</th>
-                <th class="sortable col-kd" data-sort="difficulty_score">KD</th>
-                <th class="sortable col-sales" data-sort="total_sales">Sales <span title="Estimated sales based on organic ranking BSR curves. For live exact data, use Market Analysis." style="cursor:help; color:#9ca3af; font-size:10px;">ⓘ</span></th>
-                <th class="sortable col-ads" data-sort="sponsored_count">Ads</th>
-                <th class="sortable col-price" data-sort="avg_price">Avg EGP</th>
-              </tr>
-            </thead>
-            <tbody id="ra-table-body">
-              ${this.renderKeywordRows(allKeywords)}
-            </tbody>
-          </table>
+
+          <!-- Filter Bar -->
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;background:#1e293b;border-radius:8px;margin-bottom:10px;border:1px solid #374151;">
+            <span style="color:#9ca3af;font-size:11px;font-weight:600;">Filters:</span>
+            <input type="number" id="filter-min-volume" placeholder="Min Vol" style="width:80px;padding:5px 8px;border-radius:5px;border:1px solid #374151;background:#0f172a;color:#e5e7eb;font-size:11px;">
+            <input type="number" id="filter-max-volume" placeholder="Max Vol" style="width:80px;padding:5px 8px;border-radius:5px;border:1px solid #374151;background:#0f172a;color:#e5e7eb;font-size:11px;">
+            <input type="number" id="filter-max-ads" placeholder="Max Ads" style="width:72px;padding:5px 8px;border-radius:5px;border:1px solid #374151;background:#0f172a;color:#e5e7eb;font-size:11px;">
+            <select id="filter-max-kd" style="padding:5px 8px;border-radius:5px;border:1px solid #374151;background:#0f172a;color:#e5e7eb;font-size:11px;">
+              <option value="100">All KD</option>
+              <option value="30">Easy (≤30)</option>
+              <option value="50">Medium (≤50)</option>
+              <option value="70">Hard (≤70)</option>
+            </select>
+            <input type="text" id="filter-keyword-search" placeholder="Search keyword..." style="flex:1;min-width:100px;padding:5px 8px;border-radius:5px;border:1px solid #374151;background:#0f172a;color:#e5e7eb;font-size:11px;">
+            <button id="ra-export-btn" style="background:#10b981;border:none;color:#fff;padding:5px 12px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600;">📥 Export</button>
+          </div>
+
+          <!-- Table -->
+          <div style="overflow:auto;border-radius:8px;border:1px solid #374151;">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead style="position:sticky;top:0;z-index:10;">
+                <tr style="background:#1e293b;color:#9ca3af;text-transform:uppercase;font-size:10px;letter-spacing:.5px;">
+                  <th class="ra-sortable" data-sort="keyword" style="padding:11px 10px;text-align:left;border-bottom:2px solid #374151;cursor:pointer;white-space:nowrap;">Keyword ↕</th>
+                  <th class="ra-sortable" data-sort="position" style="padding:11px 10px;text-align:right;border-bottom:2px solid #374151;cursor:pointer;white-space:nowrap;">Rank ↕</th>
+                  <th class="ra-sortable" data-sort="estimated_volume" style="padding:11px 10px;text-align:right;border-bottom:2px solid #374151;cursor:pointer;white-space:nowrap;">Volume ↕</th>
+                  <th class="ra-sortable" data-sort="difficulty_score" style="padding:11px 10px;text-align:right;border-bottom:2px solid #374151;cursor:pointer;white-space:nowrap;">Difficulty ↕</th>
+                  <th class="ra-sortable" data-sort="total_sales" style="padding:11px 10px;text-align:right;border-bottom:2px solid #374151;cursor:pointer;white-space:nowrap;">Sales ↕</th>
+                  <th class="ra-sortable" data-sort="sponsored_count" style="padding:11px 10px;text-align:right;border-bottom:2px solid #374151;cursor:pointer;white-space:nowrap;">Ads ↕</th>
+                  <th class="ra-sortable" data-sort="avg_price" style="padding:11px 10px;text-align:right;border-bottom:2px solid #374151;cursor:pointer;white-space:nowrap;">Avg Price ↕</th>
+                </tr>
+              </thead>
+              <tbody id="ra-table-body">
+                ${this.renderKeywordRows(allKeywords)}
+              </tbody>
+            </table>
+          </div>
+          <div id="ra-row-count" style="color:#6b7280;font-size:11px;margin-top:6px;text-align:right;">${totalKw} keywords</div>
         </div>
       `;
+
+      // Export CSV
+      resultsDiv.querySelector('#ra-export-btn')?.addEventListener('click', () => {
+        const rows = [['Keyword','Rank','Volume','Difficulty','Sales','Ads','Avg Price']];
+        allKeywords.forEach(k => rows.push([
+          k.keyword, k.position||'', k.estimated_volume||0, k.difficulty_score||0,
+          k.total_sales||0, k.sponsored_count||0, k.avg_price||0
+        ]));
+        const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+        const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+        a.download = `reverse_asin_${analysis.asin}_${Date.now()}.csv`; a.click();
+      });
+
+      // Keyword search filter
+      resultsDiv.querySelector('#filter-keyword-search')?.addEventListener('input', () => this._applyRaFilters(resultsDiv, allKeywords, analysis.asin));
 
       // Add filter and sort event listeners
       this.setupKeywordTableEvents(resultsDiv, allKeywords);
@@ -1090,30 +1117,73 @@ class ShadowUI {
     const maxVolume = filters.maxVolume || Infinity;
     const maxAds = filters.maxAds !== undefined ? filters.maxAds : Infinity;
     const maxKd = filters.maxKd || 100;
+    const search = (filters.search || '').toLowerCase().trim();
 
-    return keywords
-      .filter(kw => {
-        // Filter by min search volume
-        if (minVolume > 0 && (!kw.estimated_volume || kw.estimated_volume < minVolume)) return false;
-        // Filter by max search volume
-        if (maxVolume < Infinity && kw.estimated_volume && kw.estimated_volume > maxVolume) return false;
-        // Filter by max ads count
-        if (maxAds < Infinity && kw.sponsored_count != null && kw.sponsored_count > maxAds) return false;
-        // Filter by max keyword difficulty
-        if (kw.difficulty_score != null && kw.difficulty_score > maxKd) return false;
+    const fmtVol = v => { if (!v) return '—'; if (v >= 1000000) return (v/1000000).toFixed(1)+'M'; if (v >= 1000) return (v/1000).toFixed(1)+'K'; return v.toLocaleString(); };
+    const fmtKd = score => {
+      if (score == null || score === 0) return '<span style="color:#6b7280;">—</span>';
+      const color = score>=70?'#f87171':score>=50?'#fb923c':score>=30?'#facc15':'#4ade80';
+      const label = score>=70?'Hard':score>=50?'Med':score>=30?'Fair':'Easy';
+      return `<span style="color:${color};font-weight:700;">${score}</span><span style="color:#6b7280;font-size:10px;margin-left:2px;">${label}</span>`;
+    };
+    const fmtSales = v => { if (!v) return '—'; if (v >= 1000) return (v/1000).toFixed(1)+'K'; return v.toLocaleString(); };
+
+    const filtered = keywords.filter(kw => {
+      if (minVolume > 0 && (!kw.estimated_volume || kw.estimated_volume < minVolume)) return false;
+      if (maxVolume < Infinity && kw.estimated_volume && kw.estimated_volume > maxVolume) return false;
+      if (maxAds < Infinity && kw.sponsored_count != null && kw.sponsored_count > maxAds) return false;
+      if (kw.difficulty_score != null && kw.difficulty_score > maxKd) return false;
+      if (search && !kw.keyword.toLowerCase().includes(search)) return false;
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      return `<tr><td colspan="7" style="padding:24px;text-align:center;color:#6b7280;">No keywords match the current filters</td></tr>`;
+    }
+
+    return filtered.map((kw, idx) => {
+      const isRanked = kw.position && kw.position > 0;
+      const rankHtml = isRanked
+        ? `<span style="background:#10b98120;color:#10b981;padding:2px 7px;border-radius:4px;font-weight:600;">#${kw.position}</span>`
+        : `<span style="color:#4b5563;">—</span>`;
+      const currency = this.getCurrencySymbol();
+      return `
+        <tr style="background:${idx%2===0?'#0f172a':'#1e293b'};border-bottom:1px solid #374151;transition:background .15s;"
+            onmouseover="this.style.background='#263045'" onmouseout="this.style.background='${idx%2===0?'#0f172a':'#1e293b'}'">
+          <td style="padding:10px;color:#f1f5f9;font-weight:500;">${kw.keyword}</td>
+          <td style="padding:10px;text-align:right;">${rankHtml}</td>
+          <td style="padding:10px;text-align:right;color:#60a5fa;font-weight:600;">${fmtVol(kw.estimated_volume)}</td>
+          <td style="padding:10px;text-align:right;">${fmtKd(kw.difficulty_score)}</td>
+          <td style="padding:10px;text-align:right;color:#0ea5e9;font-weight:600;">${fmtSales(kw.total_sales)}</td>
+          <td style="padding:10px;text-align:right;color:#f59e0b;">${kw.sponsored_count != null ? kw.sponsored_count : '—'}</td>
+          <td style="padding:10px;text-align:right;color:#10b981;">${kw.avg_price ? currency + kw.avg_price.toFixed(0) : '—'}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  // Internal helper: re-apply all RA filters (including keyword search)
+  _applyRaFilters(resultsDiv, allKeywords, asin) {
+    const filters = {
+      minVolume: parseInt(resultsDiv.querySelector('#filter-min-volume')?.value) || 0,
+      maxVolume: resultsDiv.querySelector('#filter-max-volume')?.value ? parseInt(resultsDiv.querySelector('#filter-max-volume').value) : Infinity,
+      maxAds: resultsDiv.querySelector('#filter-max-ads')?.value ? parseInt(resultsDiv.querySelector('#filter-max-ads').value) : Infinity,
+      maxKd: parseInt(resultsDiv.querySelector('#filter-max-kd')?.value) || 100,
+      search: resultsDiv.querySelector('#filter-keyword-search')?.value || ''
+    };
+    const tbody = resultsDiv.querySelector('#ra-table-body');
+    if (tbody) {
+      tbody.innerHTML = this.renderKeywordRows(allKeywords, filters);
+      const count = resultsDiv.querySelector('#ra-row-count');
+      const visible = allKeywords.filter(k => {
+        if (filters.minVolume > 0 && (k.estimated_volume||0) < filters.minVolume) return false;
+        if (filters.maxVolume < Infinity && k.estimated_volume > filters.maxVolume) return false;
+        if (filters.maxAds < Infinity && (k.sponsored_count||0) > filters.maxAds) return false;
+        if ((k.difficulty_score||0) > filters.maxKd) return false;
+        if (filters.search && !k.keyword.toLowerCase().includes(filters.search.toLowerCase())) return false;
         return true;
-      })
-      .map(kw => `
-        <tr>
-          <td class="col-keyword">${kw.keyword}</td>
-          <td class="col-rank">${kw.position ? `#${kw.position}` : '—'}</td>
-          <td class="col-volume">${this.formatVolume(kw.estimated_volume)}</td>
-          <td class="col-kd">${this.formatDifficulty(kw.difficulty_score, kw.difficulty_level)}</td>
-          <td class="col-sales">${this.formatSales(kw.total_sales)}</td>
-          <td class="col-ads">${kw.sponsored_count != null ? kw.sponsored_count : '—'}</td>
-          <td class="col-price">${kw.avg_price ? this.getCurrencySymbol() + kw.avg_price.toFixed(0) : '—'}</td>
-        </tr>
-      `).join('');
+      }).length;
+      if (count) count.textContent = `${visible} / ${allKeywords.length} keywords`;
+    }
   }
 
   formatVolume(volume) {
@@ -1183,45 +1253,22 @@ class ShadowUI {
    * Setup filter and sort event listeners for keyword table
    */
   setupKeywordTableEvents(container, allKeywords) {
-    const tbody = container.querySelector('#ra-table-body');
-    const filterMinVolume = container.querySelector('#filter-min-volume');
-    const filterMaxVolume = container.querySelector('#filter-max-volume');
-    const filterMaxAds = container.querySelector('#filter-max-ads');
-    const filterMaxKd = container.querySelector('#filter-max-kd');
+    const updateTable = () => this._applyRaFilters(container, allKeywords, '');
 
-    const updateTable = () => {
-      const filters = {
-        minVolume: parseInt(filterMinVolume?.value) || 0,
-        maxVolume: filterMaxVolume?.value ? parseInt(filterMaxVolume.value) : Infinity,
-        maxAds: filterMaxAds?.value ? parseInt(filterMaxAds.value) : Infinity,
-        maxKd: parseInt(filterMaxKd?.value) || 100
-      };
-      if (tbody) {
-        tbody.innerHTML = this.renderKeywordRows(allKeywords, filters);
-        this.translateDOM(tbody);
-      }
-    };
+    container.querySelector('#filter-min-volume')?.addEventListener('input', updateTable);
+    container.querySelector('#filter-max-volume')?.addEventListener('input', updateTable);
+    container.querySelector('#filter-max-ads')?.addEventListener('input', updateTable);
+    container.querySelector('#filter-max-kd')?.addEventListener('change', updateTable);
 
-    // Attach filter event listeners (use 'input' for immediate feedback on number inputs)
-    filterMinVolume?.addEventListener('input', updateTable);
-    filterMaxVolume?.addEventListener('input', updateTable);
-    filterMaxAds?.addEventListener('input', updateTable);
-    filterMaxKd?.addEventListener('change', updateTable);
-
-    // Sortable columns
-    container.querySelectorAll('th.sortable').forEach(th => {
+    // Sortable column headers
+    container.querySelectorAll('th.ra-sortable').forEach(th => {
       th.addEventListener('click', () => {
         const sortKey = th.dataset.sort;
         const currentDir = th.dataset.sortDir === 'asc' ? 'desc' : 'asc';
         th.dataset.sortDir = currentDir;
 
-        // Update sort indicator
-        container.querySelectorAll('th.sortable').forEach(h => h.classList.remove('sorted-asc', 'sorted-desc'));
-        th.classList.add(currentDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
-
         allKeywords.sort((a, b) => {
-          let valA = a[sortKey];
-          let valB = b[sortKey];
+          let valA = a[sortKey], valB = b[sortKey];
           if (valA === null || valA === undefined) valA = currentDir === 'asc' ? Infinity : -Infinity;
           if (valB === null || valB === undefined) valB = currentDir === 'asc' ? Infinity : -Infinity;
           if (typeof valA === 'string') return currentDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);

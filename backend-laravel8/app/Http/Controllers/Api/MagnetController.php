@@ -33,7 +33,7 @@ class MagnetController extends Controller
             'keywords.*.avg_price' => 'nullable|numeric|min:0',
             'keywords.*.avg_reviews' => 'nullable|integer|min:0',
             'keywords.*.sponsored_count' => 'nullable|integer|min:0',
-            'keywords.*.match_type' => 'nullable|in:autocomplete,related,title,suggestion,seed',
+            'keywords.*.match_type' => 'nullable|string|max:50',
             'keywords.*.relevance_score' => 'nullable|integer|min:0|max:100',
         ]);
 

@@ -126,12 +126,22 @@ class ConstantsController extends Controller
             'test_mode_enabled' => false,
             'test_mode_keyword' => 'portal scale body',
             'test_mode_product_url' => 'https://www.amazon.eg/-/en/Portal-Accuracy-Digital-Kitchen-Scale/dp/B08P5MP4YC/ref=sr_1_2?crid=36LHSH8O6O2ES&dib=eyJ2IjoiMSJ9.byp1-SMWW_mZPJswYRC3P2tk2Yew88kCJajm3ZFck2nhXCOasuoJf2RJbbuWGRS-MJuIPlZ-T_uNgFVpN-11t-IrOqYC6BEvQ3_ThFuctNOS0zO6PRA7jebIlHTZTINKkpBkIpci2fdfZtTkdId7detczK02-VXD4t38Xg7InXtkbqj5CZGChq3n-TvakSe0Uf5J_a3a0YfxeZJzTqLcg7yda3647QWbZehfKtrk4l4BQEzS4AImvQRwOCyKYqtLR3raBl192ThqUMKR_Utqi55tMLVGDBoEcpW2yg57iZc.ZtlfuF8ML_Imdyqwweol8cl-OQhqEJB5HxZkgKQj4V8&dib_tag=se&keywords=portal+scale+body&qid=1779798144&sprefix=portal+scale+body%2Caps%2C209&sr=8-2',
+
+            // Feature Access Control settings (Active by default)
+            'feature_market_analysis_enabled' => true,
+            'feature_keyword_analyzer_pro_enabled' => true,
+            'feature_analyze_product_enabled' => true,
+            'feature_reverse_asin_enabled' => true,
+            'feature_fba_calculator_enabled' => true,
+            'feature_keyword_magnet_enabled' => true,
         ];
 
         return response()->json([
             'success' => true,
             'settings' => array_merge($defaults, $settings ?: [])
-        ]);
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+          ->header('Pragma', 'no-cache')
+          ->header('Expires', 'Sat, 01 Jan 2000 00:00:00 GMT');
     }
 
     /**

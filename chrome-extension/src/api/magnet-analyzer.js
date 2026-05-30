@@ -122,6 +122,20 @@ class MagnetAnalyzer {
         // Merge options
         this.config = { ...this.config, ...options };
 
+        // Fetch global settings to check for Test Mode
+        this.testModeEnabled = false;
+        try {
+            const apiBase = window.API_CONFIG?.baseUrl || 'http://127.0.0.1:8000';
+            const response = await fetch(`${apiBase}/api/settings?_t=${Date.now()}`);
+            if (response.ok) {
+                const configData = await response.json();
+                const settings = configData.settings || {};
+                this.testModeEnabled = settings.test_mode_enabled === true || settings.test_mode_enabled === 'true' || settings.test_mode_enabled === 1 || settings.test_mode_enabled === '1';
+            }
+        } catch (e) {
+            console.warn('[Magnet] Failed to fetch global settings for test mode:', e);
+        }
+
         // Fetch configurable settings from backend
         try {
             const backendSettings = await this.fetchBackendSettings();
@@ -211,7 +225,10 @@ class MagnetAnalyzer {
             // Step 2: Get autocomplete suggestions
             if (this.config.useAutocomplete) {
                 this.updateProgress(10, 'Fetching autocomplete suggestions...');
-                const autocomplete = await this.getAutocompleteSuggestions(this.seedKeyword);
+                let autocomplete = await this.getAutocompleteSuggestions(this.seedKeyword);
+                if (this.testModeEnabled && autocomplete.length > 0) {
+                    autocomplete = [autocomplete[0]];
+                }
                 autocomplete.forEach(kw => {
                     // Only add if contains core noun
                     if (kw.includes(coreNoun)) {
@@ -224,7 +241,10 @@ class MagnetAnalyzer {
             // Step 3: Get related keywords (variations)
             if (this.config.useRelated) {
                 this.updateProgress(25, 'Generating related keywords...');
-                const related = await this.getRelatedKeywords(this.seedKeyword);
+                let related = await this.getRelatedKeywords(this.seedKeyword);
+                if (this.testModeEnabled && related.length > 0) {
+                    related = [related[0]];
+                }
                 related.forEach(kw => {
                     if (kw.includes(coreNoun)) {
                         addKeyword(kw, 'related');
@@ -237,7 +257,11 @@ class MagnetAnalyzer {
             let topAsins = [];
             if (this.config.useTitles || this.config.useAttributes) {
                 this.updateProgress(35, 'Extracting keywords from search results...');
-                const { keywords: titleKeywords, asins } = await this.getTitleKeywordsWithAsins(this.seedKeyword);
+                let { keywords: titleKeywords, asins } = await this.getTitleKeywordsWithAsins(this.seedKeyword);
+                if (this.testModeEnabled) {
+                    if (titleKeywords.length > 0) titleKeywords = [titleKeywords[0]];
+                    if (asins.length > 0) asins = [asins[0]];
+                }
                 topAsins = asins;
 
                 if (this.config.useTitles) {
@@ -253,8 +277,14 @@ class MagnetAnalyzer {
             // Step 4.5: Get attribute-based keywords from top product pages
             if (this.config.useAttributes && topAsins.length > 0) {
                 this.updateProgress(40, 'Extracting attributes from top products...');
-                const attrResult = await this.getAttributeKeywords(topAsins, this.config.attributeProductCount);
-                const { keywords: attrKeywords, values: attrValues } = attrResult;
+                const productCount = this.testModeEnabled ? 1 : this.config.attributeProductCount;
+                const attrResult = await this.getAttributeKeywords(topAsins, productCount);
+                let { keywords: attrKeywords, values: attrValues } = attrResult;
+
+                if (this.testModeEnabled) {
+                    if (attrKeywords.length > 0) attrKeywords = [attrKeywords[0]];
+                    if (attrValues.length > 0) attrValues = [attrValues[0]];
+                }
 
                 console.log(`[Magnet DEBUG] Attribute Variation Scope: ${this.config.attributeVariationScope}`);
                 console.log(`[Magnet DEBUG] Attribute Values extracted: ${attrValues.length}`, attrValues);
@@ -309,8 +339,23 @@ class MagnetAnalyzer {
             }
 
             // Limit keywords
-            const keywordsToProcess = Array.from(allKeywords.entries())
-                .slice(0, this.config.maxKeywords);
+            let keywordsToProcess = Array.from(allKeywords.entries());
+            if (this.testModeEnabled) {
+                // Keep only exactly one keyword for every primary match type to make testing extremely fast
+                const seenTypes = new Set();
+                const filtered = [];
+                for (const [kw, matchType] of keywordsToProcess) {
+                    const primaryType = matchType.split(',')[0].trim();
+                    if (!seenTypes.has(primaryType)) {
+                        seenTypes.add(primaryType);
+                        filtered.push([kw, matchType]);
+                    }
+                }
+                keywordsToProcess = filtered;
+                console.log('[Magnet] Test Mode Active: Filtered down to 1 keyword per type:', keywordsToProcess);
+            } else {
+                keywordsToProcess = keywordsToProcess.slice(0, this.config.maxKeywords);
+            }
 
             console.log(`[Magnet] Processing ${keywordsToProcess.length} unique keywords (all contain "${coreNoun}")`);
 
@@ -365,6 +410,8 @@ class MagnetAnalyzer {
             // Step 6: Filter out generic/short keywords
             this.updateProgress(92, 'Filtering generic keywords...');
             const filteredKeywords = enrichedKeywords.filter(kw => {
+                if (this.testModeEnabled) return true;
+
                 // Must have at least 2 words (single words are too generic)
                 if (kw.word_count < 2) return false;
 
@@ -404,6 +451,9 @@ class MagnetAnalyzer {
      * Get Amazon autocomplete suggestions
      */
     async getAutocompleteSuggestions(seed) {
+        if (this.testModeEnabled) {
+            return [`${seed} manual`, `${seed} automatic`];
+        }
         const suggestions = [];
         const domain = this.marketplace.replace('www.', '').replace('amazon.', '');
         const mkp = this.marketplaces[this.marketplace] || this.marketplaces['amazon.eg'];
@@ -529,6 +579,12 @@ class MagnetAnalyzer {
      * @param {number} productCount - Number of products to scrape (configurable from backend)
      */
     async getAttributeKeywords(topProductAsins, productCount = 5) {
+        if (this.testModeEnabled) {
+            return {
+                keywords: [`${this.coreNoun} compact`, `${this.coreNoun} light`],
+                values: ['compact', 'light']
+            };
+        }
         const attributeKeywords = [];
         const origin = window.location.origin;
 
@@ -787,6 +843,12 @@ class MagnetAnalyzer {
      * Returns both keywords for title-based discovery and ASINs for attribute scraping
      */
     async getTitleKeywordsWithAsins(seed) {
+        if (this.testModeEnabled) {
+            return {
+                keywords: [`${seed} professional`, `${seed} premium`],
+                asins: ['B0811P9G8C']
+            };
+        }
         const keywords = [];
         const asins = [];
 
@@ -916,6 +978,18 @@ class MagnetAnalyzer {
     }
 
     /**
+     * Helper to get a deterministic hash from a string to generate stable mock data
+     */
+    getDeterministicHash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = (hash << 5) - hash + str.charCodeAt(i);
+            hash |= 0; // Convert to 32bit integer
+        }
+        return Math.abs(hash);
+    }
+
+    /**
      * Get metrics for a single keyword (WITHOUT rank - key difference from Cerebro)
      */
     async getKeywordMetrics(keyword) {
@@ -951,16 +1025,38 @@ class MagnetAnalyzer {
             // Get competing products count
             let competingProducts = this.extractCompetingProducts(doc, 0);
 
-            // Get products for analysis
-            const products = doc.querySelectorAll('[data-asin]:not([data-asin=""])');
-            const productsList = Array.from(products).slice(0, 20);
+            // Get products for analysis using precise selectors identical to SerpParser
+            const mainResultsContainer = doc.querySelector('.s-main-slot.s-result-list.s-search-results');
+            let productsList = [];
+            
+            if (mainResultsContainer) {
+                const productCards = mainResultsContainer.querySelectorAll('[data-component-type="s-search-result"]');
+                productsList = Array.from(productCards)
+                    .filter(card => {
+                        const asin = card.getAttribute('data-asin');
+                        return asin && asin.length === 10;
+                    })
+                    .slice(0, 20);
+            }
+
+            // Safe fallback if the main results container wasn't found or was empty
+            if (productsList.length === 0) {
+                const allProducts = doc.querySelectorAll('[data-asin]:not([data-asin=""])');
+                productsList = Array.from(allProducts)
+                    .filter(card => {
+                        const asin = card.getAttribute('data-asin');
+                        return asin && asin.length === 10;
+                    })
+                    .slice(0, 20);
+            }
 
             // Safe fallback if we couldn't parse the SERP counter
             if (!competingProducts || competingProducts <= 0) {
-                competingProducts = products.length;
+                const allProducts = doc.querySelectorAll('[data-asin]:not([data-asin=""])');
+                competingProducts = allProducts.length || productsList.length;
             }
 
-            // Calculate metrics from products
+            // Calculate metrics and parsed products for difficulty using SerpParser parity helpers
             let titleDensity = 0;
             let totalPrice = 0;
             let totalReviews = 0;
@@ -969,40 +1065,49 @@ class MagnetAnalyzer {
             let reviewCount = 0;
 
             const keywordLower = this.cleanArabicText(keyword.toLowerCase());
+            const parsedProducts = [];
 
             productsList.forEach(product => {
+                const price = this.extractProductPrice(product);
+                if (!price || price <= 0) {
+                    return; // Skip unavailable products matching SerpParser parity!
+                }
+                const title = this.extractProductTitle(product);
+                const rating = this.extractProductRating(product);
+                const reviews = this.extractProductReviewCount(product);
+                const brand = this.extractProductBrand(product);
+                const is_sponsored = this.isProductSponsored(product);
+
                 // Title density
-                let title = product.querySelector('h2, .a-text-normal')?.textContent || '';
-                title = this.cleanArabicText(title.toLowerCase());
-                if (title.includes(keywordLower)) {
+                if (title && title.toLowerCase().includes(keywordLower)) {
                     titleDensity++;
                 }
 
                 // Price
-                const priceEl = product.querySelector('.a-price .a-offscreen, .a-price-whole');
-                let priceText = priceEl?.textContent || '';
-                priceText = this.arabicToLatin(priceText);
-                const price = parseFloat(priceText.replace(/[^\d.]/g, ''));
                 if (price > 0) {
                     totalPrice += price;
                     priceCount++;
                 }
 
                 // Reviews
-                const reviewsEl = product.querySelector('.a-size-base.s-underline-text');
-                let reviewsText = reviewsEl?.textContent || '';
-                reviewsText = this.arabicToLatin(reviewsText);
-                const reviews = parseInt(reviewsText.replace(/[^\d]/g, ''));
                 if (reviews > 0) {
                     totalReviews += reviews;
                     reviewCount++;
                 }
 
                 // Sponsored
-                if (product.querySelector('[data-component-type="sp-sponsored-result"], .s-sponsored-label-text') ||
-                    product.textContent.includes('Sponsored') || product.textContent.includes('إعلان')) {
+                if (is_sponsored) {
                     sponsoredCount++;
                 }
+
+                parsedProducts.push({
+                    title,
+                    price,
+                    reviews,
+                    rating,
+                    brand,
+                    is_sponsored
+                });
             });
 
             const avgPrice = priceCount > 0 ? Math.round(totalPrice / priceCount * 100) / 100 : 0;
@@ -1011,24 +1116,8 @@ class MagnetAnalyzer {
             // Estimate search volume from competing products
             const searchVolume = this.estimateSearchVolume(competingProducts, avgReviews);
 
-            // Calculate Magnet IQ Score
-            let iqScore = competingProducts > 0
-                ? Math.round(((searchVolume / competingProducts) * 10) * 100) / 100
-                : (searchVolume > 0 ? 10 : 0);
-
-            // Scale down IQ score if search volume is less than 500 to avoid inflating low-traffic keywords
-            if (searchVolume < 500 && searchVolume > 0) {
-                const penaltyFactor = Math.sqrt(searchVolume / 500);
-                iqScore = Math.round((iqScore * penaltyFactor) * 100) / 100;
-            }
-
-            // Scale down IQ score if average competitor reviews on page 1 are very high (entrenched giants)
-            let reviewPenalty = 1.0;
-            if (avgReviews > 1000)      reviewPenalty = 0.40;
-            else if (avgReviews > 500)  reviewPenalty = 0.65;
-            else if (avgReviews > 150)  reviewPenalty = 0.85;
-
-            iqScore = Math.round((iqScore * reviewPenalty) * 100) / 100;
+            const difficulty = this.calculateKeywordDifficulty(parsedProducts);
+            const difficultyScore = difficulty.score;
 
             // CPR calculations
             const cpr8day = Math.ceil((searchVolume * 0.02) / 8);
@@ -1039,7 +1128,7 @@ class MagnetAnalyzer {
 
             return {
                 search_volume: searchVolume,
-                magnet_iq_score: iqScore,
+                magnet_iq_score: difficultyScore,
                 competing_products: competingProducts,
                 title_density: titleDensity,
                 cpr_8day: cpr8day,
@@ -1091,6 +1180,283 @@ class MagnetAnalyzer {
         else volume *= 0.8;
 
         return Math.round(volume);
+    }
+
+    /**
+     * Calculate Keyword Difficulty (KD) Score 0-100 using the same formula as in Market Analysis
+     */
+    calculateKeywordDifficulty(products) {
+        const top10 = products.slice(0, 10);
+        if (top10.length === 0) {
+            return { score: 50, level: 'medium' };
+        }
+
+        // 1. Listing Strength (35% weight)
+        let totalReviews = 0;
+        let totalRating = 0;
+        let reviewCount = 0;
+
+        top10.forEach(p => {
+            if (p.reviews !== undefined && p.reviews !== null) {
+                totalReviews += p.reviews;
+                reviewCount++;
+            }
+            if (p.rating !== undefined && p.rating !== null) {
+                totalRating += p.rating;
+            }
+        });
+
+        const avgReviews = reviewCount > 0 ? totalReviews / reviewCount : 0;
+        const avgRating = reviewCount > 0 ? totalRating / reviewCount : 4.0;
+        const listingStrength = Math.min(100, (avgReviews / 50) * (avgRating / 5) * 100);
+
+        // 2. Ad Density (25% weight)
+        const sponsoredCount = top10.filter(p => p.is_sponsored).length;
+        const adDensity = (sponsoredCount / Math.max(top10.length, 1)) * 100;
+
+        // 3. Review Barrier (25% weight)
+        const reviews = top10.map(p => p.reviews || 0).sort((a, b) => a - b);
+        const medianReviews = reviews[Math.floor(reviews.length / 2)] || 0;
+        const reviewBarrier = Math.min(100, (medianReviews / 50) * 100);
+
+        // 4. Brand Dominance (15% weight)
+        const placeholderBrands = new Set(['generic', 'unbranded', 'no brand', 'nobrand', 'unknown', 'n/a', 'na', '-', '', 'جينيريك', 'بدون علامة تجارية']);
+        const brands = top10
+            .map(p => (p.brand || '').trim().toLowerCase())
+            .filter(b => b.length > 1 && !placeholderBrands.has(b));
+        
+        let brandDominance = 0;
+        if (brands.length > 0) {
+            const brandCounts = {};
+            let maxBrandCount = 0;
+            brands.forEach(b => {
+                brandCounts[b] = (brandCounts[b] || 0) + 1;
+                if (brandCounts[b] > maxBrandCount) {
+                    maxBrandCount = brandCounts[b];
+                }
+            });
+            brandDominance = Math.round((maxBrandCount / brands.length) * 100);
+        }
+
+        const kdScore = Math.round(
+            ((listingStrength || 0) * 0.35) +
+            ((adDensity || 0) * 0.25) +
+            ((reviewBarrier || 0) * 0.25) +
+            ((brandDominance || 0) * 0.15)
+        );
+        const score = isNaN(kdScore) ? 50 : Math.max(0, Math.min(100, kdScore));
+
+        let level = 'medium';
+        if (score < 20) level = 'very_easy';
+        else if (score < 40) level = 'easy';
+        else if (score < 60) level = 'moderate';
+        else if (score < 80) level = 'hard';
+        else level = 'very_hard';
+
+        console.log(`========== [Magnet] KD Calculation Breakdown ==========`);
+        console.log('Top 10 Products parsed:', top10.map((p, i) => ({
+            index: i + 1,
+            title: p.title?.substring(0, 40) + '...',
+            price: p.price,
+            rating: p.rating,
+            reviews: p.reviews,
+            brand: p.brand,
+            is_sponsored: p.is_sponsored
+        })));
+        console.log('Listing Strength Sub-score:', { avgReviews, avgRating, listingStrength });
+        console.log('Ad Density Sub-score:', { sponsoredCount, adDensity });
+        console.log('Review Barrier Sub-score:', { medianReviews, reviewBarrier });
+        console.log('Brand Dominance Sub-score:', { brands, brandDominance });
+        console.log('Calculated Final Difficulty Score:', score);
+        console.log(`=======================================================`);
+
+        return { score, level };
+    }
+
+    /**
+     * Advanced product parsing helpers translated from SerpParser with full parity
+     */
+    convertNumerals(text) {
+        if (!text) return '';
+        const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+        let clean = text.toString();
+        // Replace Arabic decimal and thousand separators
+        clean = clean.replace(/٫/g, '.').replace(/٬/g, '');
+        // Replace Eastern Arabic numerals
+        clean = clean.replace(/[٠-٩]/g, d => arabicDigits.indexOf(d));
+        return clean;
+    }
+
+    extractProductTitle(card) {
+        const h2Element = card.querySelector('h2');
+        if (h2Element) {
+            const ariaLabel = h2Element.getAttribute('aria-label');
+            if (ariaLabel) {
+                return ariaLabel.replace(/^Sponsored Ad\s*[–-]\s*/i, '').trim();
+            }
+            const titleSpan = h2Element.querySelector('span');
+            if (titleSpan) {
+                let title = titleSpan.textContent?.trim() || '';
+                title = title.replace(/^Sponsored\s*/gi, '').trim();
+                if (title && title !== 'Sponsored') {
+                    return title;
+                }
+            }
+        }
+        const titleEl = card.querySelector('.s-title-instructions-style span, [data-cy="title-recipe"] span');
+        let title = titleEl?.textContent?.trim() || '';
+        title = title.replace(/^Sponsored\s*/gi, '').trim();
+        return title;
+    }
+
+    extractProductPrice(card) {
+        const priceWhole = card.querySelector('.a-price .a-price-whole');
+        const priceFraction = card.querySelector('.a-price .a-price-fraction');
+        if (priceWhole) {
+            const whole = this.convertNumerals(priceWhole.textContent).replace(/[^\d]/g, '');
+            const fraction = this.convertNumerals(priceFraction?.textContent || '').replace(/[^\d]/g, '') || '00';
+            const val = parseFloat(`${whole}.${fraction}`);
+            return isNaN(val) ? 0 : val;
+        }
+        const priceOffscreen = card.querySelector('.a-price .a-offscreen');
+        if (priceOffscreen) {
+            const text = this.convertNumerals(priceOffscreen.textContent).replace(/[^\d.]/g, '');
+            const val = parseFloat(text);
+            return isNaN(val) ? 0 : val;
+        }
+        return 0;
+    }
+
+    extractProductRating(card) {
+        const ratingEl = card.querySelector('[aria-label*="out of 5"], [aria-label*="من 5"], .a-icon-star-small .a-icon-alt, [aria-label*="نجوم"]');
+        if (ratingEl) {
+            const text = this.convertNumerals(ratingEl.getAttribute('aria-label') || ratingEl.textContent);
+            const match = text.match(/([\d.]+)/);
+            if (match) {
+                const val = parseFloat(match[1]);
+                return isNaN(val) ? 0 : val;
+            }
+        }
+        return 0;
+    }
+
+    extractProductReviewCount(card) {
+        const ratingLinks = card.querySelectorAll('a[aria-label*="rating"], a[aria-label*="review"], a[aria-label*="تقييم"], a[aria-label*="مراجعة"]');
+        for (const link of ratingLinks) {
+            const ariaLabel = this.convertNumerals(link.getAttribute('aria-label') || '');
+            const match = ariaLabel.match(/([\d,]+)\s*(?:rating|review|تقييم|مراجعة)/i);
+            if (match) {
+                const val = parseInt(match[1].replace(/,/g, ''));
+                return isNaN(val) ? 0 : val;
+            }
+        }
+        const reviewLink = card.querySelector('[href*="#customerReviews"]');
+        if (reviewLink) {
+            const ariaLabel = this.convertNumerals(reviewLink.getAttribute('aria-label') || '');
+            const ariaMatch = ariaLabel.match(/([\d,]+)\s*(?:rating|review|تقييم|مراجعة)/i);
+            if (ariaMatch) {
+                const val = parseInt(ariaMatch[1].replace(/,/g, ''));
+                return isNaN(val) ? 0 : val;
+            }
+            const text = this.convertNumerals(reviewLink.textContent).replace(/[^\d]/g, '');
+            if (text) {
+                const val = parseInt(text);
+                return isNaN(val) ? 0 : val;
+            }
+        }
+        const reviewsBlock = card.querySelector('[data-cy="reviews-block"], .a-row.a-size-small');
+        if (reviewsBlock) {
+            const spans = reviewsBlock.querySelectorAll('span');
+            for (const span of spans) {
+                const text = this.convertNumerals(span.textContent.trim());
+                const match = text.match(/^\(?(\d+)\)?$/);
+                if (match) {
+                    const val = parseInt(match[1]);
+                    return isNaN(val) ? 0 : val;
+                }
+            }
+        }
+        const ratingContainer = card.querySelector('[aria-label*="star"], [aria-label*="نجوم"]');
+        if (ratingContainer) {
+            const parent = ratingContainer.closest('.a-row, .a-section');
+            if (parent) {
+                const links = parent.querySelectorAll('a, span');
+                for (const link of links) {
+                    const text = this.convertNumerals(link.textContent.trim());
+                    const match = text.match(/^\(?(\d[\d,]*)\)?$/);
+                    if (match) {
+                        const val = parseInt(match[1].replace(/,/g, ''));
+                        return isNaN(val) ? 0 : val;
+                    }
+                }
+            }
+        }
+        return 0;
+    }
+
+    extractProductBrand(card) {
+        const checkBrandValid = (text) => {
+            if (!text) return false;
+            const textLower = text.toLowerCase().trim();
+            const skipBrands = new Set(['list:', 'was:', 'list', 'was', 'save', 'saving', 'off', 'egp', 'usd', 'price', 'item', 'details']);
+            if (skipBrands.has(textLower) || 
+                textLower.includes('stock') || 
+                textLower.includes('order') || 
+                textLower.includes('delivery') || 
+                textLower.includes('shipping') || 
+                textLower.includes('arrives') ||
+                textLower.includes('متبق') ||
+                textLower.includes('شحن') ||
+                textLower.includes('باق') ||
+                textLower.includes('save by') ||
+                textLower.includes('buying') ||
+                textLower.length <= 1) {
+                return false;
+            }
+            return true;
+        };
+
+        const byBrandElements = card.querySelectorAll('.a-size-base.s-underline-text, .a-link-normal.s-no-outline');
+        for (const el of byBrandElements) {
+            const text = el.textContent?.trim();
+            if (text && !text.includes('sponsored') && text.length < 50 && checkBrandValid(text)) {
+                const parent = el.parentElement;
+                if (parent && parent.textContent?.toLowerCase().includes('by ')) {
+                    return text;
+                }
+            }
+        }
+        const brandLink = card.querySelector('a[href*="brand="]');
+        if (brandLink) {
+            const text = brandLink.textContent?.trim();
+            if (text && text.length < 50 && checkBrandValid(text)) {
+                return text;
+            }
+        }
+        const storeLink = card.querySelector('a[href*="/stores/"]');
+        if (storeLink) {
+            const text = storeLink.textContent?.trim();
+            if (text) {
+                const cleanText = text.replace(/^Visit (the )?/i, '').replace(/ Store$/i, '').trim();
+                if (checkBrandValid(cleanText)) {
+                    return cleanText;
+                }
+            }
+        }
+        const brandRow = card.querySelector('.a-row.a-size-base .a-size-base:not(.a-price)');
+        if (brandRow) {
+            const text = brandRow.textContent?.trim();
+            if (text && text.length < 40 && !text.match(/^\d|EGP|USD|\$/) && checkBrandValid(text)) {
+                return text;
+            }
+        }
+        return null;
+    }
+
+    isProductSponsored(card) {
+        const sponsoredEl = card.querySelector('.s-label-popover-default, [data-component-type="sp-sponsored-result"]');
+        const text = card.textContent.toLowerCase();
+        return sponsoredEl !== null || text.includes('sponsored') || text.includes('إعلان');
     }
 
     /**
@@ -1204,7 +1570,7 @@ class MagnetAnalyzer {
         const headers = [
             'Keyword',
             'Search Volume',
-            'IQ Score',
+            'Difficulty',
             'Title Density',
             'Competing Products',
             'Word Count',
@@ -1221,7 +1587,7 @@ class MagnetAnalyzer {
         const rows = keywords.map(kw => [
             kw.keyword,
             kw.search_volume,
-            kw.magnet_iq_score,
+            kw.magnet_iq_score, // Stored difficulty value
             kw.title_density,
             kw.competing_products,
             kw.word_count,

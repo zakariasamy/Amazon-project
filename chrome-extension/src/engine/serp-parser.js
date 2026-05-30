@@ -105,6 +105,17 @@ class SerpParser {
         return products;
     }
 
+    convertNumerals(text) {
+        if (!text) return '';
+        const arabicDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        let clean = text.toString();
+        // Replace Arabic decimal and thousand separators
+        clean = clean.replace(/٫/g, '.').replace(/٬/g, '');
+        // Replace Eastern Arabic numerals
+        clean = clean.replace(/[٠-٩]/g, d => arabicDigits['٠١٢٣٤٥٦٧٨٩'.indexOf(d)]);
+        return clean;
+    }
+
     extractTitle(card) {
         // First try to get title from h2 aria-label (most reliable, includes full title)
         const h2Element = card.querySelector('h2');
@@ -139,54 +150,63 @@ class SerpParser {
     extractPrice(card) {
         const priceWhole = card.querySelector('.a-price .a-price-whole');
         const priceFraction = card.querySelector('.a-price .a-price-fraction');
-
         if (priceWhole) {
-            const whole = priceWhole.textContent.replace(/[^\d]/g, '');
-            const fraction = priceFraction?.textContent?.replace(/[^\d]/g, '') || '00';
-            return parseFloat(`${whole}.${fraction}`);
+            const whole = this.convertNumerals(priceWhole.textContent).replace(/[^\d]/g, '');
+            const fraction = this.convertNumerals(priceFraction?.textContent || '').replace(/[^\d]/g, '') || '00';
+            const val = parseFloat(`${whole}.${fraction}`);
+            return isNaN(val) ? 0 : val;
         }
 
         // Fallback
         const priceOffscreen = card.querySelector('.a-price .a-offscreen');
         if (priceOffscreen) {
-            const text = priceOffscreen.textContent.replace(/[^\d.]/g, '');
-            return parseFloat(text) || 0;
+            const text = this.convertNumerals(priceOffscreen.textContent).replace(/[^\d.]/g, '');
+            const val = parseFloat(text);
+            return isNaN(val) ? 0 : val;
         }
 
         return 0;
     }
 
     extractRating(card) {
-        const ratingEl = card.querySelector('[aria-label*="out of 5"], .a-icon-star-small .a-icon-alt');
+        const ratingEl = card.querySelector('[aria-label*="out of 5"], [aria-label*="من 5"], .a-icon-star-small .a-icon-alt, [aria-label*="نجوم"]');
         if (ratingEl) {
-            const text = ratingEl.getAttribute('aria-label') || ratingEl.textContent;
+            const text = this.convertNumerals(ratingEl.getAttribute('aria-label') || ratingEl.textContent);
             const match = text.match(/([\d.]+)/);
-            return match ? parseFloat(match[1]) : 0;
+            if (match) {
+                const val = parseFloat(match[1]);
+                return isNaN(val) ? 0 : val;
+            }
         }
         return 0;
     }
 
     extractReviewCount(card) {
         // Method 1: Look for aria-label with "ratings" or "reviews"
-        const ratingLinks = card.querySelectorAll('a[aria-label*="rating"], a[aria-label*="review"]');
+        const ratingLinks = card.querySelectorAll('a[aria-label*="rating"], a[aria-label*="review"], a[aria-label*="تقييم"], a[aria-label*="مراجعة"]');
         for (const link of ratingLinks) {
-            const ariaLabel = link.getAttribute('aria-label') || '';
-            const match = ariaLabel.match(/(\d+)\s*(?:rating|review)/i);
+            const ariaLabel = this.convertNumerals(link.getAttribute('aria-label') || '');
+            const match = ariaLabel.match(/([\d,]+)\s*(?:rating|review|تقييم|مراجعة)/i);
             if (match) {
-                return parseInt(match[1]) || 0;
+                const val = parseInt(match[1].replace(/,/g, ''));
+                return isNaN(val) ? 0 : val;
             }
         }
 
         // Method 2: Look for review count link with #customerReviews
         const reviewLink = card.querySelector('[href*="#customerReviews"]');
         if (reviewLink) {
-            const ariaLabel = reviewLink.getAttribute('aria-label') || '';
-            const ariaMatch = ariaLabel.match(/(\d+)\s*(?:rating|review)/i);
+            const ariaLabel = this.convertNumerals(reviewLink.getAttribute('aria-label') || '');
+            const ariaMatch = ariaLabel.match(/([\d,]+)\s*(?:rating|review|تقييم|مراجعة)/i);
             if (ariaMatch) {
-                return parseInt(ariaMatch[1]) || 0;
+                const val = parseInt(ariaMatch[1].replace(/,/g, ''));
+                return isNaN(val) ? 0 : val;
             }
-            const text = reviewLink.textContent.replace(/[^\d]/g, '');
-            if (text) return parseInt(text) || 0;
+            const text = this.convertNumerals(reviewLink.textContent).replace(/[^\d]/g, '');
+            if (text) {
+                const val = parseInt(text);
+                return isNaN(val) ? 0 : val;
+            }
         }
 
         // Method 3: Look for span with parentheses like "(5)"
@@ -194,25 +214,27 @@ class SerpParser {
         if (reviewsBlock) {
             const spans = reviewsBlock.querySelectorAll('span');
             for (const span of spans) {
-                const text = span.textContent.trim();
+                const text = this.convertNumerals(span.textContent.trim());
                 const match = text.match(/^\(?(\d+)\)?$/);
                 if (match) {
-                    return parseInt(match[1]) || 0;
+                    const val = parseInt(match[1]);
+                    return isNaN(val) ? 0 : val;
                 }
             }
         }
 
         // Method 4: Fallback - look near star rating
-        const ratingContainer = card.querySelector('[aria-label*="star"]');
+        const ratingContainer = card.querySelector('[aria-label*="star"], [aria-label*="نجوم"]');
         if (ratingContainer) {
             const parent = ratingContainer.closest('.a-row, .a-section');
             if (parent) {
                 const links = parent.querySelectorAll('a, span');
                 for (const link of links) {
-                    const text = link.textContent.trim();
+                    const text = this.convertNumerals(link.textContent.trim());
                     const match = text.match(/^\(?(\d[\d,]*)\)?$/);
                     if (match) {
-                        return parseInt(match[1].replace(/,/g, '')) || 0;
+                        const val = parseInt(match[1].replace(/,/g, ''));
+                        return isNaN(val) ? 0 : val;
                     }
                 }
             }

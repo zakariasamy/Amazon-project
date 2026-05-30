@@ -86,9 +86,21 @@ if (isSearchPage()) {
     initializeSearchAnalyzer();
 }
 
-function initializeAnalyzer() {
+async function initializeAnalyzer() {
     console.log('Initializing analyzer...');
-    injectAnalyzerButton();
+    
+    let settings = {};
+    try {
+        const response = await fetch(`http://127.0.0.1:8000/api/settings?_t=${Date.now()}`);
+        if (response.ok) {
+            const data = await response.json();
+            settings = data.settings || {};
+        }
+    } catch (e) {
+        console.warn('Failed to fetch settings for analyzer:', e);
+    }
+    
+    injectAnalyzerButton(settings);
 }
 
 function checkAuthAndExecute(callback) {
@@ -143,9 +155,26 @@ function showAuthAlert(message = '') {
     resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function injectAnalyzerButton() {
+function injectAnalyzerButton(settings = {}) {
     // Check if panel already exists
     if (document.getElementById('sv-product-panel-container')) {
+        return;
+    }
+
+    const isAnalyzeProductEnabled = settings.feature_analyze_product_enabled !== undefined
+        ? (settings.feature_analyze_product_enabled === true || settings.feature_analyze_product_enabled === 'true' || settings.feature_analyze_product_enabled === 1 || settings.feature_analyze_product_enabled === '1')
+        : true;
+        
+    const isReverseAsinEnabled = settings.feature_reverse_asin_enabled !== undefined
+        ? (settings.feature_reverse_asin_enabled === true || settings.feature_reverse_asin_enabled === 'true' || settings.feature_reverse_asin_enabled === 1 || settings.feature_reverse_asin_enabled === '1')
+        : true;
+        
+    const isFbaCalculatorEnabled = settings.feature_fba_calculator_enabled !== undefined
+        ? (settings.feature_fba_calculator_enabled === true || settings.feature_fba_calculator_enabled === 'true' || settings.feature_fba_calculator_enabled === 1 || settings.feature_fba_calculator_enabled === '1')
+        : true;
+
+    if (!isAnalyzeProductEnabled && !isReverseAsinEnabled && !isFbaCalculatorEnabled) {
+        console.log('All product page analysis features are disabled by admin');
         return;
     }
 
@@ -169,7 +198,7 @@ function injectAnalyzerButton() {
 
     if (!target) {
         console.log('No suitable target for inline panel, using floating fallback');
-        injectFloatingButtons();
+        injectFloatingButtons(isAnalyzeProductEnabled);
         return;
     }
 
@@ -217,6 +246,7 @@ function injectAnalyzerButton() {
                     <div style="font-size: 13px; color: #94a3b8; font-weight: 500;">${t('Product Intelligence')}</div>
                 </div>
                 <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    ${isAnalyzeProductEnabled ? `
                     <button id="sv-btn-analyze" style="
                         background: linear-gradient(135deg, #f59e0b, #d97706); 
                         color: white; 
@@ -236,6 +266,8 @@ function injectAnalyzerButton() {
                         min-width: max-content;">
                         <span>🔍</span> ${t('Analyze Product')}
                     </button>
+                    ` : ''}
+                    ${isReverseAsinEnabled ? `
                     <button id="sv-btn-reverse" style="
                         background: linear-gradient(135deg, #6366f1, #4f46e5); 
                         color: white; 
@@ -255,6 +287,8 @@ function injectAnalyzerButton() {
                         min-width: max-content;">
                         <span>🔑</span> ${t('Reverse ASIN')}
                     </button>
+                    ` : ''}
+                    ${isFbaCalculatorEnabled ? `
                     <button id="sv-btn-calculator" style="
                         background: linear-gradient(135deg, #10b981, #059669); 
                         color: white; 
@@ -274,6 +308,7 @@ function injectAnalyzerButton() {
                         min-width: max-content;">
                         <span>💰</span> ${t('FBA Calculator')}
                     </button>
+                    ` : ''}
                 </div>
             </div>
             
@@ -303,33 +338,37 @@ function injectAnalyzerButton() {
         }
     };
 
-    setupButtonEffects('sv-btn-analyze');
-    setupButtonEffects('sv-btn-reverse');
-    setupButtonEffects('sv-btn-calculator');
+    if (isAnalyzeProductEnabled) {
+        setupButtonEffects('sv-btn-analyze');
+        document.getElementById('sv-btn-analyze').addEventListener('click', () => {
+            checkAuthAndExecute(() => analyzeCurrentProduct('full'));
+        });
+    }
 
-    document.getElementById('sv-btn-analyze').addEventListener('click', () => {
-        checkAuthAndExecute(() => analyzeCurrentProduct('full'));
-    });
+    if (isReverseAsinEnabled) {
+        setupButtonEffects('sv-btn-reverse');
+        document.getElementById('sv-btn-reverse').addEventListener('click', () => {
+            checkAuthAndExecute(() => analyzeCurrentProduct('keywords'));
+        });
+    }
 
-    document.getElementById('sv-btn-reverse').addEventListener('click', () => {
-        checkAuthAndExecute(() => analyzeCurrentProduct('keywords'));
-    });
-
-    document.getElementById('sv-btn-calculator').addEventListener('click', () => {
-        checkAuthAndExecute(() => openFBACalculator());
-    });
+    if (isFbaCalculatorEnabled) {
+        setupButtonEffects('sv-btn-calculator');
+        document.getElementById('sv-btn-calculator').addEventListener('click', () => {
+            checkAuthAndExecute(() => openFBACalculator());
+        });
+    }
 }
 
-function injectFloatingButtons() {
+function injectFloatingButtons(isAnalyzeProductEnabled = true) {
+    if (!isAnalyzeProductEnabled) return;
     // Original floating button logic as fallback
     if (document.getElementById('amazon-analyzer-btn')) return;
     const container = document.createElement('div');
     container.id = 'amazon-analyzer-btn-container';
 
-    // ... (rest of old floating button code could be here, but simpler to just inline basic fallback) ...
-    // For brevity of replacement, I'll just skip the complex CSS for fallback or implement simple one
-
     const btn = document.createElement('div');
+    btn.id = 'amazon-analyzer-btn';
     btn.textContent = '🔍 Analyze';
     btn.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#232f3e;color:white;padding:12px;border-radius:50px;cursor:pointer;z-index:9999;box-shadow:0 4px 10px rgba(0,0,0,0.3);font-weight:bold;';
     btn.onclick = () => analyzeCurrentProduct('full');
@@ -956,22 +995,47 @@ function showSearchAuthAlert() {
     }, 6000);
 }
 
-function initializeSearchAnalyzer() {
+async function initializeSearchAnalyzer() {
     console.log('Initializing search analyzer...');
-    injectSearchAnalyzerButton();
+    
+    let settings = {};
+    try {
+        const response = await fetch(`http://127.0.0.1:8000/api/settings?_t=${Date.now()}`);
+        if (response.ok) {
+            const data = await response.json();
+            settings = data.settings || {};
+        }
+    } catch (e) {
+        console.warn('Failed to fetch settings for search analyzer:', e);
+    }
+    
+    injectSearchAnalyzerButton(settings);
 
     // Initialize Cerebro UI for multi-ASIN selection
     if (typeof CerebroUI !== 'undefined') {
         const cerebroUI = new CerebroUI();
-        cerebroUI.initOnSearchPage();
+        cerebroUI.initOnSearchPage(settings);
         window.cerebroUI = cerebroUI; // Make accessible globally
         console.log('Cerebro UI initialized for ASIN selection');
     }
 }
 
-function injectSearchAnalyzerButton() {
+function injectSearchAnalyzerButton(settings = {}) {
     // Check if button already exists
     if (document.getElementById('search-volume-btn-container')) {
+        return;
+    }
+
+    const isMarketAnalysisEnabled = settings.feature_market_analysis_enabled !== undefined
+        ? (settings.feature_market_analysis_enabled === true || settings.feature_market_analysis_enabled === 'true' || settings.feature_market_analysis_enabled === 1 || settings.feature_market_analysis_enabled === '1')
+        : true;
+
+    const isKeywordMagnetEnabled = settings.feature_keyword_magnet_enabled !== undefined
+        ? (settings.feature_keyword_magnet_enabled === true || settings.feature_keyword_magnet_enabled === 'true' || settings.feature_keyword_magnet_enabled === 1 || settings.feature_keyword_magnet_enabled === '1')
+        : true;
+
+    if (!isMarketAnalysisEnabled && !isKeywordMagnetEnabled) {
+        console.log('Both search page analysis features are disabled by admin');
         return;
     }
 
@@ -1095,8 +1159,12 @@ function injectSearchAnalyzerButton() {
     `;
     description.textContent = t('Analyze market or discover keyword ideas');
 
-    container.appendChild(btn);
-    container.appendChild(magnetBtn);
+    if (isMarketAnalysisEnabled) {
+        container.appendChild(btn);
+    }
+    if (isKeywordMagnetEnabled) {
+        container.appendChild(magnetBtn);
+    }
     container.appendChild(description);
 
     // Find the search results container and inject above it
@@ -1178,7 +1246,7 @@ async function analyzeSearchPage() {
         let batchDelay = 500;
 
         try {
-            const configResponse = await fetch('http://127.0.0.1:8000/api/settings');
+            const configResponse = await fetch(`http://127.0.0.1:8000/api/settings?_t=${Date.now()}`);
             if (configResponse.ok) {
                 const configData = await configResponse.json();
                 const settings = configData.settings || {};

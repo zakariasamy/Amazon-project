@@ -96,7 +96,7 @@ class ReverseAsin {
             try {
                 const baseUrl = this.getBackendBaseUrl();
                 console.log('[Reverse ASIN] Using backend baseUrl:', baseUrl);
-                const configResponse = await fetch(`${baseUrl}/api/settings`);
+                const configResponse = await fetch(`${baseUrl}/api/settings?_t=${Date.now()}`);
                 if (configResponse.ok) {
                     const configData = await configResponse.json();
                     const settings = configData.settings || {};

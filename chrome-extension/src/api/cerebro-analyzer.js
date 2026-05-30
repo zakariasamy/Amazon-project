@@ -92,7 +92,7 @@ class CerebroAnalyzer {
             // Fetch configuration from backend
             try {
                 const baseUrl = this.getBackendBaseUrl();
-                const configResponse = await fetch(`${baseUrl}/api/settings`);
+                const configResponse = await fetch(`${baseUrl}/api/settings?_t=${Date.now()}`);
                 if (configResponse.ok) {
                     const configData = await configResponse.json();
                     const settings = configData.settings || {};

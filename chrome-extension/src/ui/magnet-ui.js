@@ -72,7 +72,7 @@ class MagnetUI {
             'discover keywords': 'اكتشاف الكلمات المفتاحية',
             'starting analysis...': 'بدء التحليل...',
             'keywords found': 'الكلمات المكتشفة',
-            'top iq score': 'أعلى درجة ذكاء',
+            'avg difficulty': 'متوسط الصعوبة',
             'avg volume': 'متوسط حجم البحث',
             'total sales': 'إجمالي المبيعات',
             'duration': 'المدة',
@@ -87,7 +87,7 @@ class MagnetUI {
             'export': 'تصدير',
             'dashboard': 'لوحة التحكم',
             'search volume': 'حجم البحث',
-            'magnet iq score': 'درجة ذكاء المغناطيس',
+            'difficulty': 'الصعوبة',
             'word count': 'عدد الكلمات',
             'title density max': 'الحد الأقصى لكثافة العنوان',
             'competition max': 'الحد الأقصى للمنافسة',
@@ -102,7 +102,7 @@ class MagnetUI {
             'search keywords...': 'البحث عن كلمات مفتاحية...',
             'keyword': 'الكلمة المفتاحية',
             'volume ↕': 'حجم البحث ↕',
-            'iq score ↕': 'درجة الذكاء ↕',
+            'difficulty ↕': 'الصعوبة ↕',
             'title density': 'كثافة العنوان',
             'competition': 'المنافسة',
             'cpr': 'معدل الإطلاق (CPR)',
@@ -131,8 +131,8 @@ class MagnetUI {
             'keywords for': 'كلمات مفتاحية لـ',
             'search volume minimum': 'الحد الأدنى لحجم البحث',
             'search volume maximum': 'الحد الأقصى لحجم البحث',
-            'magnet iq score minimum': 'الحد الأدنى لدرجة ذكاء المغناطيس',
-            'magnet iq score maximum': 'الحد الأقصى لدرجة ذكاء المغناطيس',
+            'difficulty minimum': 'الحد الأدنى للصعوبة',
+            'difficulty maximum': 'الحد الأقصى للصعوبة',
             'word count minimum': 'الحد الأدنى لعدد الكلمات',
             'word count maximum': 'الحد الأقصى لعدد الكلمات'
         };
@@ -182,12 +182,34 @@ class MagnetUI {
     /**
      * Open the seed keyword input panel
      */
-    openInputPanel() {
+    async openInputPanel() {
         if (this.panel) return;
 
         // Get current search term if on search page
         const urlParams = new URLSearchParams(window.location.search);
         const currentKeyword = urlParams.get('k') || '';
+
+        // Fetch settings first
+        let testModeEnabled = false;
+        let testModeKeyword = '';
+        try {
+            const apiBase = 'http://127.0.0.1:8000';
+            const response = await fetch(`${apiBase}/api/settings?_t=${Date.now()}`);
+            if (response.ok) {
+                const configData = await response.json();
+                const settings = configData.settings || {};
+                testModeEnabled = settings.test_mode_enabled === true || settings.test_mode_enabled === 'true' || settings.test_mode_enabled === 1 || settings.test_mode_enabled === '1';
+                testModeKeyword = settings.test_mode_keyword || 'portal scale body';
+            }
+        } catch (e) {
+            console.warn('[Magnet] Failed to fetch settings:', e);
+        }
+
+        let seedValue = currentKeyword;
+        if (testModeEnabled && testModeKeyword) {
+            seedValue = testModeKeyword;
+            console.log(`[Magnet] Test Mode Active: Overriding seed keyword with "${testModeKeyword}"`);
+        }
 
         // Create backdrop
         const backdrop = document.createElement('div');
@@ -257,7 +279,7 @@ class MagnetUI {
                 <label style="display: block; color: #e5e7eb; font-size: 14px; font-weight: 600; margin-bottom: 8px;">
                     Seed Keyword
                 </label>
-                <input type="text" id="magnet-seed-input" value="${currentKeyword}" placeholder="Enter a keyword to discover ideas..." style="
+                <input type="text" id="magnet-seed-input" value="${seedValue}" placeholder="Enter a keyword to discover ideas..." style="
                     width: 100%;
                     padding: 14px 16px;
                     background: #1e293b;
@@ -269,6 +291,25 @@ class MagnetUI {
                     transition: border-color 0.2s;
                     box-sizing: border-box;
                 ">
+                
+                ${testModeEnabled ? `
+                <div style="
+                    margin-top: 10px;
+                    padding: 10px 14px;
+                    background: rgba(245, 158, 11, 0.12);
+                    border: 1px solid rgba(245, 158, 11, 0.3);
+                    border-radius: 8px;
+                    color: #fbbf24;
+                    font-size: 12px;
+                    font-weight: 600;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                ">
+                    <span>⚠️</span> Test Mode Active: forced seed keyword to "${testModeKeyword}"
+                </div>
+                ` : ''}
+
                 <p style="color: #6b7280; font-size: 11px; margin-top: 8px;">
                     💡 Magnet will find related keywords, autocomplete suggestions, and keyword ideas from search results.
                 </p>
@@ -565,6 +606,12 @@ class MagnetUI {
         const marketplace = results.marketplace || window.location.hostname;
         const currency = this.getMarketplaceCurrency(marketplace);
 
+        const avgScore = Math.round(this.calcAvg(keywords, 'magnet_iq_score'));
+        let avgColor = '#4ade80';
+        if (avgScore >= 70) avgColor = '#f87171';
+        else if (avgScore >= 50) avgColor = '#fb923c';
+        else if (avgScore >= 30) avgColor = '#facc15';
+
         content.innerHTML = `
             <!-- Summary Stats -->
             <div style="
@@ -584,8 +631,8 @@ class MagnetUI {
                     <div style="color: #10b981; font-size: 24px; font-weight: 700;">${keywords.length}</div>
                 </div>
                 <div style="text-align: center;">
-                    <div style="color: #9ca3af; font-size: 10px; text-transform: uppercase; font-weight: 600;">Top IQ Score</div>
-                    <div style="color: #f59e0b; font-size: 24px; font-weight: 700;">${this.calcMax(keywords, 'magnet_iq_score')}</div>
+                    <div style="color: #9ca3af; font-size: 10px; text-transform: uppercase; font-weight: 600;">Avg Difficulty</div>
+                    <div style="color: ${avgColor}; font-size: 24px; font-weight: 700;">${avgScore}<span style="font-size: 12px; color: #6b7280; font-weight: 400;">/100</span></div>
                 </div>
                 <div style="text-align: center;">
                     <div style="color: #9ca3af; font-size: 10px; text-transform: uppercase; font-weight: 600;">Avg Volume</div>
@@ -676,16 +723,16 @@ class MagnetUI {
                         </div>
                     </div>
                     
-                    <!-- IQ Score Range -->
+                    <!-- Difficulty Range -->
                     <div>
-                        <label style="color: #9ca3af; display: block; margin-bottom: 4px;">Magnet IQ Score</label>
+                        <label style="color: #9ca3af; display: block; margin-bottom: 4px;">Difficulty</label>
                         <div style="display: flex; gap: 4px; align-items: center;">
-                            <input type="number" id="filter-iq-min" placeholder="Min" step="0.5" style="
+                            <input type="number" id="filter-iq-min" placeholder="Min" step="1" style="
                                 width: 60px; padding: 6px; border-radius: 4px; border: 1px solid #374151;
                                 background: #1e293b; color: #e5e7eb; font-size: 11px;
                             ">
                             <span style="color: #6b7280;">-</span>
-                            <input type="number" id="filter-iq-max" placeholder="Max" step="0.5" style="
+                            <input type="number" id="filter-iq-max" placeholder="Max" step="1" style="
                                 width: 60px; padding: 6px; border-radius: 4px; border: 1px solid #374151;
                                 background: #1e293b; color: #e5e7eb; font-size: 11px;
                             ">
@@ -790,7 +837,7 @@ class MagnetUI {
                         <tr style="background: #0f172a; color: #9ca3af; text-transform: uppercase; font-size: 10px;">
                             <th style="padding: 12px; text-align: left; border-bottom: 2px solid #374151;">Keyword</th>
                             <th style="padding: 12px; text-align: right; border-bottom: 2px solid #374151; cursor: pointer;" data-sort="search_volume">Volume ↕</th>
-                            <th style="padding: 12px; text-align: right; border-bottom: 2px solid #374151; cursor: pointer;" data-sort="magnet_iq_score">IQ Score ↕</th>
+                            <th style="padding: 12px; text-align: right; border-bottom: 2px solid #374151; cursor: pointer;" data-sort="magnet_iq_score">Difficulty ↕</th>
                             <th style="padding: 12px; text-align: right; border-bottom: 2px solid #374151;">Title Density</th>
                             <th style="padding: 12px; text-align: right; border-bottom: 2px solid #374151;">Competition</th>
                             <th style="padding: 12px; text-align: right; border-bottom: 2px solid #374151;">CPR</th>
@@ -870,9 +917,20 @@ class MagnetUI {
      */
     renderKeywordRows(keywords, currency = 'USD') {
         return keywords.map((kw, idx) => {
-            const iqClass = kw.magnet_iq_score >= 5 ? '#10b981' :
-                kw.magnet_iq_score >= 3 ? '#f59e0b' :
-                    kw.magnet_iq_score >= 1 ? '#fb923c' : '#ef4444';
+            let kdColor = '#4ade80'; // Bright Green
+            let levelText = 'Easy';
+            const score = Math.round(kw.magnet_iq_score || 0);
+
+            if (score >= 70) {
+                kdColor = '#f87171'; // Red
+                levelText = 'Hard';
+            } else if (score >= 50) {
+                kdColor = '#fb923c'; // Orange
+                levelText = 'Med';
+            } else if (score >= 30) {
+                kdColor = '#facc15'; // Yellow
+                levelText = 'Fair';
+            }
 
             const typeColors = {
                 'seed': '#fbbf24',
@@ -896,9 +954,7 @@ class MagnetUI {
                     </td>
                     <td style="padding: 10px 12px; text-align: right; color: #60a5fa; font-weight: 600;">${this.formatNumber(kw.search_volume)}</td>
                     <td style="padding: 10px 12px; text-align: right;">
-                        <span style="background: ${iqClass}20; color: ${iqClass}; padding: 2px 8px; border-radius: 4px; font-weight: 700;">
-                            ${(kw.magnet_iq_score || 0).toFixed(1)}
-                        </span>
+                        <span style="color: ${kdColor}; font-weight: 700;">${score}</span><span style="color: #6b7280; font-size: 10px; margin-left: 2px;">${levelText}</span>
                     </td>
                     <td style="padding: 10px 12px; text-align: right; color: #9ca3af;">${kw.title_density}/48</td>
                     <td style="padding: 10px 12px; text-align: right; color: #f472b6;">${this.formatNumber(kw.competing_products)}</td>
@@ -945,7 +1001,7 @@ class MagnetUI {
                 filtered = filtered.filter(kw => kw.search_volume >= 1000);
                 break;
             case 'opportunity':
-                filtered = filtered.filter(kw => kw.magnet_iq_score >= 3 && kw.title_density <= 5);
+                filtered = filtered.filter(kw => kw.magnet_iq_score <= 40 && kw.title_density <= 5);
                 break;
             case 'low_competition':
                 filtered = filtered.filter(kw => kw.competing_products <= 10000 && kw.search_volume >= 500);
@@ -1118,14 +1174,14 @@ class MagnetUI {
             return;
         }
 
-        const headers = ['Keyword', 'Search Volume', 'IQ Score', 'Title Density', 'Competing Products',
+        const headers = ['Keyword', 'Search Volume', 'Difficulty', 'Title Density', 'Competing Products',
             'Word Count', 'CPR 8-Day', 'CPR Total', 'Keyword Sales', 'Avg Price', 'Avg Reviews',
             'Sponsored Count', 'Match Type', 'Relevance Score'];
 
         const rows = this.resultsData.keywords.map(kw => [
             `"${kw.keyword}"`,
             kw.search_volume,
-            kw.magnet_iq_score?.toFixed(2) || 0,
+            Math.round(kw.magnet_iq_score || 0),
             kw.title_density,
             kw.competing_products,
             kw.word_count,
