@@ -38,6 +38,7 @@ return [
         'Content-Type',
         'Origin',
         'X-Requested-With',
+        'X-Tool-Source',
     ],
 
     'exposed_headers' => [],

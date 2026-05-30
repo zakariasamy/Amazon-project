@@ -44,28 +44,28 @@ class ProductAnalysisController extends Controller
 
         // Get algorithm constants
         $constants = $this->getConstants($marketplace, $category);
-        
+
         // Get seasonality
         $seasonality = $this->getSeasonality($marketplace);
-        
+
         // Calculate sales estimate
         $salesEstimate = $this->calculateSalesEstimate($bsr, $monthlyBadge, $constants, $seasonality, $isFBA);
-        
+
         // Calculate fees
         $fees = $this->calculateFees($marketplace, $category, $price, $weightKg, $isFBA);
-        
+
         // Calculate profit metrics
         $profitMetrics = $this->calculateProfitMetrics($price, $cogs, $fees, $salesEstimate['monthly'], $marketplace);
-        
+
         // Calculate competition metrics
         $competitionMetrics = $this->calculateCompetitionMetrics($bsr, $validated['reviews_count'] ?? 0, $validated['rating'] ?? 0, $salesEstimate['monthly']);
-        
+
         // Calculate opportunity score
         $opportunityScore = $this->calculateOpportunityScore($profitMetrics, $competitionMetrics, $salesEstimate);
-        
+
         // Generate insights
         $insights = $this->generateInsights($salesEstimate, $profitMetrics, $competitionMetrics, $opportunityScore);
-        
+
         // Cache the product for analytics
         $this->cacheProduct($validated, $salesEstimate);
 
@@ -75,14 +75,14 @@ class ProductAnalysisController extends Controller
             'marketplace' => $marketplace,
             'price' => $price,
             'currency' => $currency,
-            
+
             'sales' => $salesEstimate,
             'fees' => $fees,
             'profit' => $profitMetrics,
             'competition' => $competitionMetrics,
             'opportunity' => $opportunityScore,
             'insights' => $insights,
-            
+
             'constants_version' => $constants['version'] ?? '2025.01.01',
             'calculated_at' => now()->toISOString()
         ]);
@@ -176,28 +176,28 @@ class ProductAnalysisController extends Controller
 
         // BSR-based calculation: Sales = C / BSR^P
         $baseSales = $constants['C'] / pow($bsr, $constants['P']);
-        
+
         // Apply seasonality
         $baseSales *= $seasonality;
-        
+
         // FBA boost (typically sells 10% more)
         if ($isFBA) {
             $baseSales *= 1.10;
         }
-        
+
         // Clamp to floor/ceiling
         $monthlySales = max(min(round($baseSales), $constants['ceiling']), $constants['floor']);
-        
+
         // Calculate confidence based on BSR range
         $confidence = $constants['confidence'];
         if ($bsr > 100000) $confidence *= 0.7;
         elseif ($bsr > 50000) $confidence *= 0.85;
-        
+
         $confidenceLabel = $confidence >= 0.75 ? 'high' : ($confidence >= 0.5 ? 'medium' : 'low');
-        
+
         // Calculate range based on confidence
         $spreadPercent = 0.20 + (1 - $confidence) * 0.30;
-        
+
         return [
             'monthly' => $monthlySales,
             'daily' => ($monthlySales / 30) < 10 ? round($monthlySales / 30, 1) : round($monthlySales / 30),
@@ -262,9 +262,9 @@ class ProductAnalysisController extends Controller
 
         $referralPercent = $referralFee ? floatval($referralFee->referral_fee_percent) : 15.0;
         $referralMin = $referralFee ? floatval($referralFee->referral_fee_min) : 0.30;
-        
+
         $referralAmount = max($price * ($referralPercent / 100), $referralMin);
-        
+
         // Fulfillment fee (if FBA)
         $fulfillmentAmount = 0;
         if ($isFBA) {
@@ -286,9 +286,9 @@ class ProductAnalysisController extends Controller
                 else $fulfillmentAmount = $base['large_oversize'];
             }
         }
-        
+
         $totalFees = $referralAmount + $fulfillmentAmount;
-        
+
         return [
             'referral' => round($referralAmount, 2),
             'referral_percent' => $referralPercent,
@@ -301,20 +301,20 @@ class ProductAnalysisController extends Controller
     private function calculateProfitMetrics(float $price, float $cogs, array $fees, int $monthlySales, string $marketplace): array
     {
         $totalFees = $fees['total'];
-        
+
         // Default tax estimate (14% VAT for Egypt, 0 for others in simple view)
         $taxRate = ($marketplace === 'amazon.eg') ? 0.14 : 0.0;
         $estimatedTax = $price * $taxRate;
-        
+
         $profitPerUnit = $price - $cogs - $totalFees - $estimatedTax;
-        
+
         $margin = $price > 0 ? ($profitPerUnit / $price) * 100 : 0;
         $roi = ($cogs + $totalFees) > 0 ? ($profitPerUnit / ($cogs + $totalFees)) * 100 : 0;
-        
+
         $monthlyProfit = $profitPerUnit * $monthlySales;
         $annualProfit = $monthlyProfit * 12;
         $monthlyRevenue = $price * $monthlySales;
-        
+
         return [
             'per_unit' => round($profitPerUnit, 2),
             'margin_percent' => round($margin, 1),
@@ -329,43 +329,59 @@ class ProductAnalysisController extends Controller
 
     private function calculateCompetitionMetrics(?int $bsr, int $reviewsCount, float $rating, int $monthlySales): array
     {
-        // Competition score based on BSR and reviews
-        $score = 50; // Neutral start
-        
-        if ($bsr) {
-            if ($bsr < 1000) $score += 30; // Very competitive
-            elseif ($bsr < 10000) $score += 20;
-            elseif ($bsr < 50000) $score += 10;
-            elseif ($bsr > 100000) $score -= 10; // Less competitive
+        // Competition is based on TOTAL REVIEW COUNT (1-5), matching the extension UI.
+        // Levels:
+        //   very_low:  0-10   (score 1)
+        //   low:       11-50  (score 2)
+        //   medium:    51-200 (score 3)
+        //   high:      201-1,000 (score 4)
+        //   very_high: 1,001+ (score 5)
+
+        $level = 'very_low';
+        $score = 1;
+
+        if ($reviewsCount <= 10) {
+            $level = 'very_low';
+            $score = 1;
+        } elseif ($reviewsCount <= 50) {
+            $level = 'low';
+            $score = 2;
+        } elseif ($reviewsCount <= 200) {
+            $level = 'medium';
+            $score = 3;
+        } elseif ($reviewsCount <= 1000) {
+            $level = 'high';
+            $score = 4;
+        } else {
+            $level = 'very_high';
+            $score = 5;
         }
-        
-        if ($reviewsCount > 1000) $score += 20;
-        elseif ($reviewsCount > 500) $score += 15;
-        elseif ($reviewsCount > 100) $score += 10;
-        elseif ($reviewsCount < 50) $score -= 10;
-        
-        $score = max(0, min(100, $score));
-        
-        $level = 'medium';
-        if ($score >= 80) $level = 'very_high';
-        elseif ($score >= 60) $level = 'high';
-        elseif ($score >= 40) $level = 'medium';
-        elseif ($score >= 20) $level = 'low';
-        else $level = 'very_low';
-        
+
+        // Review velocity (reviews/month) requires product age, which we don't reliably have.
+        // Use the same conservative assumption as the extension: ~12 months in market.
+        $reviewVelocity = round($reviewsCount / 12, 1);
+
+        // Market saturation flag used by the UI badge.
+        // Keep this separate from the competition score (which is reviews-only).
+        $saturated = false;
+        if ($bsr && $reviewsCount > 500 && $bsr > 10000) {
+            $saturated = true;
+        }
+
         return [
             'score' => $score,
             'level' => $level,
             'reviews' => $reviewsCount,
             'rating' => $rating,
-            'reviewVelocity' => round($monthlySales * 0.015, 1) // Est. 1.5% review rate
+            'reviewVelocity' => $reviewVelocity,
+            'saturated' => $saturated,
         ];
     }
 
     private function calculateOpportunityScore(array $profit, array $competition, array $sales): array
     {
         $notes = [];
-        
+
         // Sales Volume Notes
         if ($sales['monthly'] >= 500) {
             $notes[] = ['type' => 'success', 'message' => '🔥 High demand - strong sales volume'];
@@ -376,7 +392,7 @@ class ProductAnalysisController extends Controller
         } else {
             $notes[] = ['type' => 'danger', 'message' => '❌ Low sales volume - demand unverified'];
         }
-        
+
         // Margin Notes
         if ($profit['margin_percent'] >= 40) {
             $notes[] = ['type' => 'success', 'message' => '💰 Excellent margins (' . round($profit['margin_percent'], 0) . '%)'];
@@ -387,7 +403,7 @@ class ProductAnalysisController extends Controller
         } else {
             $notes[] = ['type' => 'danger', 'message' => '❌ Low margins (' . round($profit['margin_percent'], 0) . '%) - may not be profitable'];
         }
-        
+
         // Rating Notes
         $productRating = floatval($competition['rating'] ?? 0);
         if ($productRating >= 4.5) {
@@ -399,7 +415,7 @@ class ProductAnalysisController extends Controller
         } elseif ($productRating > 0) {
             $notes[] = ['type' => 'danger', 'message' => '❌ Low rating (' . $productRating . '★) - quality concerns'];
         }
-        
+
         // Competition Notes
         $reviewCount = intval($competition['reviews'] ?? 0);
         if ($reviewCount >= 1000) {
@@ -411,16 +427,16 @@ class ProductAnalysisController extends Controller
         } else {
             $notes[] = ['type' => 'success', 'message' => '🟢 Very low competition - only ' . $reviewCount . ' reviews'];
         }
-        
+
         // Calculate a simple score for backwards compatibility
         $positiveCount = count(array_filter($notes, fn($n) => $n['type'] === 'success'));
         $dangerCount = count(array_filter($notes, fn($n) => $n['type'] === 'danger'));
-        
+
         $overallRating = 'fair';
         if ($dangerCount >= 2) $overallRating = 'poor';
         elseif ($dangerCount === 0 && $positiveCount >= 3) $overallRating = 'excellent';
         elseif ($positiveCount >= 2) $overallRating = 'good';
-        
+
         return [
             'score' => 0, // Deprecated - using notes now
             'rating' => $overallRating,
@@ -432,35 +448,35 @@ class ProductAnalysisController extends Controller
     private function generateInsights(array $sales, array $profit, array $competition, array $opportunity): array
     {
         $insights = [];
-        
+
         // Sales insights
         if ($sales['confidence'] === 'high') {
             $insights[] = ['type' => 'success', 'message' => "High confidence estimate: ~{$sales['monthly']} sales/month"];
         } elseif ($sales['confidence'] === 'low') {
             $insights[] = ['type' => 'warning', 'message' => "Low confidence estimate - BSR may be unstable"];
         }
-        
+
         // Profit insights
         if ($profit['margin_percent'] >= 40) {
             $insights[] = ['type' => 'success', 'message' => "Excellent margins ({$profit['margin_percent']}%) - great profit potential"];
         } elseif ($profit['margin_percent'] < 15) {
             $insights[] = ['type' => 'danger', 'message' => "Low margins ({$profit['margin_percent']}%) - may not be profitable"];
         }
-        
+
         // Competition insights
         if ($competition['level'] === 'very_high') {
             $insights[] = ['type' => 'warning', 'message' => "Very competitive market - hard to gain market share"];
         } elseif ($competition['level'] === 'low' || $competition['level'] === 'very_low') {
             $insights[] = ['type' => 'success', 'message' => "Low competition - easier to rank and grow"];
         }
-        
+
         // Opportunity insight
         if ($opportunity['recommended']) {
             $insights[] = ['type' => 'success', 'message' => "Opportunity score: {$opportunity['score']}/100 - Worth considering!"];
         } else {
             $insights[] = ['type' => 'warning', 'message' => "Opportunity score: {$opportunity['score']}/100 - Proceed with caution"];
         }
-        
+
         return $insights;
     }
 

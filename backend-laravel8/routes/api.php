@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\ReverseAsinController;
 use App\Http\Controllers\Api\CalibrationController;
 use App\Http\Controllers\Api\ProductAnalysisController;
+use App\Http\Controllers\Api\ProductCacheController;
 
 /*
 |--------------------------------------------------------------------------
@@ -35,6 +36,7 @@ Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
 // *** MAIN PRODUCT ANALYSIS ENDPOINT ***
 // This is the main endpoint that extension calls for all calculations
 Route::post('/analyze', [ProductAnalysisController::class, 'analyze']);
+Route::post('/products/cache/batch', [ProductCacheController::class, 'batch']);
 
 // Constants & Configuration (Read-only, public)
 Route::get('/constants', [ConstantsController::class, 'index']);
@@ -66,6 +68,8 @@ use App\Http\Controllers\Api\SearchVolumeController;
 Route::post('/search-volume/estimate', [SearchVolumeController::class, 'estimate'])
     ->middleware('throttle:heavy');
 Route::post('/search-volume/batch-estimate', [SearchVolumeController::class, 'batchEstimate'])
+    ->middleware('throttle:heavy');
+Route::post('/search-volume/batch-cached', [SearchVolumeController::class, 'batchCached'])
     ->middleware('throttle:heavy');
 
 // Cerebro - Multi-ASIN Keyword Analysis
@@ -124,4 +128,3 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/calibration/trigger', [CalibrationController::class, 'trigger']);
     Route::post('/calibration/run-full', [CalibrationController::class, 'runFull']);
 });
-

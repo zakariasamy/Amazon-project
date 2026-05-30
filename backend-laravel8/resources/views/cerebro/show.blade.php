@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $analysis->name ?? 'Analysis Results' }} - Keyword Analyzer Pro</title>
+    <title>{{ $analysis->name ?? 'Analysis Results' }} - Competitor Keyword Analyzer</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -416,7 +416,7 @@
     <nav class="nav">
         <div class="nav-logo">
             <span>🧠</span>
-            <span>Keyword Analyzer Pro</span>
+            <span>Competitor Keyword Analyzer</span>
         </div>
         <div class="nav-links">
             <a href="{{ route('dashboard') }}">Dashboard</a>

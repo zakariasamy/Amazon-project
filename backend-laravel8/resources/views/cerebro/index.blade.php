@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Keyword Analyzer Pro - Dashboard</title>
+    <title>Competitor Keyword Analyzer - Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -322,7 +322,7 @@
     <nav class="nav">
         <div class="nav-logo">
             <span>🧠</span>
-            <span>Keyword Analyzer Pro</span>
+            <span>Competitor Keyword Analyzer</span>
         </div>
         <div class="nav-links">
             <a href="{{ route('dashboard') }}">Dashboard</a>
@@ -431,7 +431,7 @@
             <div class="empty-state">
                 <div class="empty-state-icon">🔍</div>
                 <div class="empty-state-title">No analyses yet</div>
-                <div class="empty-state-text">Run Keyword Analyzer Pro from the Chrome extension to see results here</div>
+                <div class="empty-state-text">Run Competitor Keyword Analyzer from the Chrome extension to see results here</div>
             </div>
             @endif
         </div>

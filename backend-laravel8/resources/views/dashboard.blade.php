@@ -482,7 +482,7 @@
                 </a>
                 <a href="/cerebro" class="nav-item">
                     <span class="nav-item-icon">🧠</span>
-                    Keyword Analyzer Pro
+                    Competitor Keyword Analyzer
                 </a>
                 <a href="/magnet" class="nav-item">
                     <span class="nav-item-icon">🧲</span>
@@ -610,7 +610,7 @@
             <div class="quick-actions">
                 <a href="/cerebro" class="quick-action">
                     <span class="quick-action-icon">🧠</span>
-                    <span class="quick-action-title">Keyword Analyzer Pro</span>
+                    <span class="quick-action-title">Competitor Keyword Analyzer</span>
                     <span class="quick-action-desc">Multi-ASIN keyword analysis</span>
                 </a>
                 <a href="/magnet" class="quick-action">

@@ -6,9 +6,31 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class SearchVolumeController extends Controller
 {
+    /**
+     * Normalize marketplace identifiers coming from browser hostnames.
+     * Examples: "www.amazon.eg" -> "amazon.eg", "https://amazon.com" -> "amazon.com".
+     */
+    private function normalizeMarketplace(string $marketplace): string
+    {
+        $m = strtolower(trim($marketplace));
+        $m = preg_replace('#^https?://#', '', $m);
+        $m = explode('/', $m)[0] ?? $m;
+        $m = preg_replace('#^(www\.|smile\.|m\.)#', '', $m);
+
+        $known = ['amazon.co.uk', 'amazon.com', 'amazon.eg', 'amazon.de'];
+        foreach ($known as $k) {
+            if (Str::endsWith($m, $k)) {
+                return $k;
+            }
+        }
+
+        return $m;
+    }
     /**
      * CVR (Conversion Rate) by marketplace and category
      * Used to reverse-engineer search volume from sales
@@ -63,12 +85,26 @@ class SearchVolumeController extends Controller
             'products.*.is_sponsored' => 'nullable|boolean',
             'products.*.monthly_sales' => 'nullable|integer|min:0',
             'products.*.category' => 'nullable|string|max:200',
+            'prefer_cached_volume' => 'nullable|boolean',
         ]);
+
+        $marketplace = $this->normalizeMarketplace($validated['marketplace']);
+
+        // Save debug payload when test mode is enabled
+        $source = $request->header('X-Tool-Source', 'cerebro');
+        $this->saveDebugPayload(
+            $source,
+            $validated['keyword'],
+            $marketplace,
+            $validated['products'],
+            $validated['prefer_cached_volume'] ?? null
+        );
 
         $result = $this->performEstimation(
             $validated['keyword'],
-            $validated['marketplace'],
-            $validated['products']
+            $marketplace,
+            $validated['products'],
+            $validated['prefer_cached_volume'] ?? false
         );
 
         return response()->json($result);
@@ -90,14 +126,30 @@ class SearchVolumeController extends Controller
             'items.*.products.*.is_sponsored' => 'nullable|boolean',
             'items.*.products.*.monthly_sales' => 'nullable|integer|min:0',
             'items.*.products.*.category' => 'nullable|string|max:200',
+            'items.*.prefer_cached_volume' => 'nullable|boolean',
         ]);
+
+        // Save debug payload when test mode is enabled (one file per keyword)
+        $source = $request->header('X-Tool-Source', 'reverse_asin');
+        foreach ($validated['items'] as $item) {
+            $marketplace = $this->normalizeMarketplace($item['marketplace']);
+            $this->saveDebugPayload(
+                $source,
+                $item['keyword'],
+                $marketplace,
+                $item['products'],
+                $item['prefer_cached_volume'] ?? null
+            );
+        }
 
         $results = [];
         foreach ($validated['items'] as $item) {
+            $marketplace = $this->normalizeMarketplace($item['marketplace']);
             $results[] = $this->performEstimation(
                 $item['keyword'],
-                $item['marketplace'],
-                $item['products']
+                $marketplace,
+                $item['products'],
+                $item['prefer_cached_volume'] ?? false
             );
         }
 
@@ -107,18 +159,118 @@ class SearchVolumeController extends Controller
         ]);
     }
 
-    protected function performEstimation($keyword, $marketplace, $products)
+    public function cached(Request $request)
+    {
+        $validated = $request->validate([
+            'keyword' => 'required|string|max:255',
+            'marketplace' => 'required|string|max:30',
+        ]);
+
+        $cachedVolume = $this->getCachedVolume(
+            $validated['keyword'],
+            $validated['marketplace'],
+            true
+        );
+
+        return response()->json([
+            'success' => true,
+            'found' => $cachedVolume !== null,
+            'keyword' => trim($validated['keyword']),
+            'marketplace' => $validated['marketplace'],
+            'search_volume' => $cachedVolume,
+        ]);
+    }
+
+    public function batchCached(Request $request)
+    {
+        $validated = $request->validate([
+            'keywords' => 'required|array|min:1|max:100',
+            'keywords.*' => 'required|string|max:255',
+            'marketplace' => 'required|string|max:30',
+        ]);
+
+        $marketplace = $validated['marketplace'];
+        $results = [];
+
+        foreach ($validated['keywords'] as $keyword) {
+            $cachedVolume = $this->getCachedVolume($keyword, $marketplace, true);
+            if ($cachedVolume !== null) {
+                $results[$keyword] = $cachedVolume;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'marketplace' => $marketplace,
+            'cached_volumes' => $results,
+            'found_count' => count($results)
+        ]);
+    }
+
+    /**
+     * Save incoming request payload to a JSON file for debugging.
+     * Only saves when test_mode_enabled = true in app_settings.
+     */
+    private function saveDebugPayload(string $source, string $keyword, string $marketplace, array $products, ?bool $preferCachedVolume = null): void
+    {
+        try {
+            $testMode = DB::table('app_settings')
+                ->where('key', 'test_mode_enabled')
+                ->value('value');
+
+            if (!$testMode || $testMode === 'false' || $testMode === '0') {
+                return;
+            }
+
+            $dir = storage_path('logs/debug');
+            if (!is_dir($dir)) {
+                mkdir($dir, 0775, true);
+            }
+
+            // Sanitize keyword for filename
+            $safeKeyword = preg_replace('/[^a-z0-9_\-]/', '_', strtolower(trim($keyword)));
+            $safeKeyword = substr($safeKeyword, 0, 60);
+            $filename = "{$dir}/{$source}__{$safeKeyword}.json";
+
+            $data = [
+                'source'         => $source,
+                'keyword'        => $keyword,
+                'marketplace'    => $marketplace,
+                'prefer_cached_volume' => $preferCachedVolume,
+                'saved_at'       => now()->toISOString(),
+                'product_count'  => count($products),
+                'products'       => array_map(fn($p) => [
+                    'position'      => $p['position'] ?? null,
+                    'asin'          => $p['asin'] ?? null,
+                    'monthly_sales' => $p['monthly_sales'] ?? null,
+                    'bsr'           => $p['bsr'] ?? null,
+                    'is_sponsored'  => $p['is_sponsored'] ?? false,
+                    'price'         => $p['price'] ?? null,
+                    'reviews'       => $p['reviews'] ?? null,
+                    'category'      => $p['category'] ?? null,
+                ], $products),
+            ];
+
+            file_put_contents($filename, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+        } catch (\Throwable $e) {
+            // Never crash the main request because of debug logging
+            Log::warning('saveDebugPayload failed: ' . $e->getMessage());
+        }
+    }
+
+    protected function performEstimation($keyword, $marketplace, $products, bool $preferCachedVolume = false)
     {
         // Save fresh BSR data to cache for analytics (but don't READ from cache - BSR changes frequently)
         $updates = [];
         $now = now();
-        
+
         foreach ($products as &$product) {
             $asin = $product['asin'] ?? null;
             if (!$asin) continue;
-            
+
             $hasNewBsr = !empty($product['bsr']);
-            
+
             if ($hasNewBsr) {
                 // Save fresh BSR to cache for historical tracking
                 $updates[] = [
@@ -136,12 +288,12 @@ class SearchVolumeController extends Controller
             // NOTE: We no longer read BSR from cache - frontend enriches with fresh data
         }
         unset($product);
-        
+
         // Perform bulk upsert to save fresh BSR data
         if (!empty($updates)) {
             DB::table('product_cache')->upsert(
-                $updates, 
-                ['asin', 'marketplace'], 
+                $updates,
+                ['asin', 'marketplace'],
                 ['bsr', 'category', 'price', 'monthly_sales_estimate', 'last_scraped_at', 'updated_at']
             );
         }
@@ -149,63 +301,12 @@ class SearchVolumeController extends Controller
         // Count products with actual sales data
         $productsWithSales = count(array_filter($products, fn($p) => !empty($p['monthly_sales']) && $p['monthly_sales'] > 0));
         $productsWithBsr = count(array_filter($products, fn($p) => !empty($p['bsr']) && $p['bsr'] > 0));
-        
+
         // Check cache if we have limited sales data (e.g., from reverse ASIN module)
         // A previous market analysis might have better data
-        $cachedVolume = null;
-        if ($productsWithSales < 5 && $productsWithBsr < 5) {
-            // First try search_analyses for detailed data
-            $cachedData = DB::table('search_analyses')
-                ->where('keyword', $keyword)
-                ->where('marketplace', $marketplace)
-                ->where('created_at', '>=', now()->subDays(7)) // Only use recent cache (7 days)
-                ->orderByDesc('search_volume')
-                ->first();
-            
-            if ($cachedData && $cachedData->search_volume > 0) {
-                $cachedVolume = [
-                    'estimated' => (int) $cachedData->search_volume,
-                    'range' => [
-                        'min' => (int) round($cachedData->search_volume * 0.7),
-                        'max' => (int) round($cachedData->search_volume * 1.3)
-                    ],
-                    'confidence' => 'medium',
-                    'confidence_score' => 0.6,
-                    'demand_level' => $cachedData->demand_level ?? 'low',
-                    'source' => 'cache',
-                    'products_used' => $cachedData->products_count ?? 0,
-                    'cached_at' => $cachedData->created_at
-                ];
-            }
-            
-            // Fallback to keyword_cache if search_analyses has no data
-            if (!$cachedVolume) {
-                $keywordCache = DB::table('keyword_cache')
-                    ->where('keyword', $keyword)
-                    ->where('marketplace', $marketplace)
-                    ->where('updated_at', '>=', now()->subDays(14)) // Allow older cache
-                    ->first();
-                
-                if ($keywordCache && $keywordCache->search_volume_estimate > 0) {
-                    $demandLevel = 'low';
-                    if ($keywordCache->search_volume_estimate >= 3000) $demandLevel = 'high';
-                    elseif ($keywordCache->search_volume_estimate >= 1000) $demandLevel = 'medium';
-                    
-                    $cachedVolume = [
-                        'estimated' => (int) $keywordCache->search_volume_estimate,
-                        'range' => [
-                            'min' => (int) round($keywordCache->search_volume_estimate * 0.7),
-                            'max' => (int) round($keywordCache->search_volume_estimate * 1.3)
-                        ],
-                        'confidence' => 'low',
-                        'confidence_score' => 0.4,
-                        'demand_level' => $demandLevel,
-                        'source' => 'keyword_cache',
-                        'cached_at' => $keywordCache->updated_at
-                    ];
-                }
-            }
-        }
+        $cachedVolume = ($preferCachedVolume || ($productsWithSales < 5 && $productsWithBsr < 5))
+            ? $this->getCachedVolume($keyword, $marketplace, $preferCachedVolume)
+            : null;
 
         // DEBUG: Log individual product data for debugging
         $debugProducts = [];
@@ -227,10 +328,10 @@ class SearchVolumeController extends Controller
 
         // Calculate search volume from current data
         $result = $this->calculateSearchVolume($marketplace, $products);
-        
-        // Use cached volume if it's significantly better than current calculation
-        // (Current calculation with limited data may underestimate)
-        if ($cachedVolume && $cachedVolume['estimated'] > $result['estimated'] * 1.5) {
+
+        // Competitor Keyword Analyzer can explicitly prefer today's Market Analysis value
+        // so the same keyword displays the same volume across tools.
+        if ($cachedVolume && ($preferCachedVolume || $cachedVolume['estimated'] > $result['estimated'] * 1.5)) {
             $result = $cachedVolume;
         }
 
@@ -248,26 +349,27 @@ class SearchVolumeController extends Controller
 
         // Save full analysis history (ENSURE products data is saved)
         $this->saveSearchAnalysis($keyword, $marketplace, $result, $result['demand_level'] ?? 'low', $enrichedProducts);
+        $this->cacheProducts($marketplace, $enrichedProducts);
 
         return [
             'success' => true,
             'keyword' => $keyword,
             'marketplace' => $marketplace,
-            
+
             'search_volume' => $result,
             'difficulty' => $difficulty,
             'ad_metrics' => $adMetrics,
             'insights' => $insights,
-            
+
             // Product statistics for display
             'product_stats' => $productStats,
-            
+
             // Return enriched products for table display
             'products' => $enrichedProducts,
-            
+
             'products_analyzed' => count($products),
             'calculated_at' => now()->toISOString(),
-            
+
             // DEBUG: Include product breakdown for debugging
             'debug' => [
                 'product_sales' => $debugProducts,
@@ -309,28 +411,28 @@ class SearchVolumeController extends Controller
             // Revenue
             $revenue = $product['revenue'] ?? 0;
             $totalRevenue += $revenue;
-            
+
             // Price
             $price = $product['price'] ?? 0;
             if ($price > 0) {
                 $totalPrice += $price;
                 $priceCount++;
             }
-            
+
             // BSR
             $bsr = $product['bsr'] ?? 0;
             if ($bsr > 0) {
                 $totalBsr += $bsr;
                 $bsrCount++;
             }
-            
+
             // Reviews
             $reviews = $product['reviews'] ?? 0;
             if ($reviews > 0) {
                 $totalReviews += $reviews;
                 $reviewCount++;
             }
-            
+
             // Sales
             $sales = $product['monthly_sales'] ?? 0;
             if ($sales > 0) {
@@ -359,34 +461,34 @@ class SearchVolumeController extends Controller
     private function enrichProductsWithEstimates(string $marketplace, array $products): array
     {
         $enrichedProducts = [];
-        
+
         foreach ($products as $product) {
             $monthlySales = $product['monthly_sales'] ?? null;
             $isEstimated = false;
-            
+
             // Ensure BSR is a valid integer (handle string 'null' or empty values)
             $bsr = null;
             if (isset($product['bsr']) && $product['bsr'] !== null && $product['bsr'] !== 'null' && $product['bsr'] !== '') {
                 $bsr = intval($product['bsr']);
                 if ($bsr <= 0) $bsr = null;
             }
-            
+
             // Estimate sales from BSR if not provided
             if (!$monthlySales && $bsr !== null && $bsr > 0) {
                 $category = $product['category'] ?? 'default';
                 $monthlySales = $this->estimateSalesFromBSR($marketplace, $bsr, $category);
                 $isEstimated = true;
             }
-            
+
             // Calculate revenue
             $price = floatval($product['price'] ?? 0);
             $revenue = $monthlySales ? round($price * $monthlySales) : 0;
-            
+
             // Estimate FBA fees (simplified - 15% referral + base fulfillment)
             $referralFee = $price * 0.15;
             $fulfillmentFee = $marketplace === 'amazon.eg' ? 25 : 3.50;
             $estimatedFees = round($referralFee + $fulfillmentFee, 2);
-            
+
             $enrichedProducts[] = [
                 'asin' => $product['asin'] ?? '',
                 'position' => $product['position'] ?? 0,
@@ -408,7 +510,7 @@ class SearchVolumeController extends Controller
                 'image' => $product['image'] ?? null,
             ];
         }
-        
+
         return $enrichedProducts;
     }
 
@@ -454,15 +556,15 @@ class SearchVolumeController extends Controller
         // Step 3: Calculate with position weights
         foreach ($reordered as $i => $product) {
             $position = $i + 1;
-            
+
             // Get sales estimate for this product
             $monthlySales = $product['monthly_sales'] ?? null;
-            
+
             if (!$monthlySales && isset($product['bsr']) && $product['bsr'] > 0) {
                 // Estimate sales from BSR if not provided
                 $category = $product['category'] ?? 'default';
                 $monthlySales = $this->estimateSalesFromBSR($marketplace, $product['bsr'], $category);
-                
+
                 $debugBSR[] = [
                     'asin' => $product['asin'] ?? 'unknown',
                     'bsr' => $product['bsr'],
@@ -484,10 +586,10 @@ class SearchVolumeController extends Controller
 
             // Position weight - scalable to 60+ products
             $positionWeight = $this->getPositionWeight($position);
-            
+
             // Type weight: Organic = 1.0, Sponsored = 0.5 (less reliable sales source)
             $typeWeight = ($product['is_sponsored'] ?? false) ? 0.5 : 1.0;
-            
+
             // Weighted sales contribution
             $weightedSales += $monthlySales * $positionWeight * $typeWeight;
 
@@ -580,7 +682,7 @@ class SearchVolumeController extends Controller
     private function calculateKeywordDifficulty(array $products): array
     {
         $top10 = array_slice($products, 0, 10);
-        
+
         if (empty($top10)) {
             return [
                 'score' => 50,
@@ -594,7 +696,7 @@ class SearchVolumeController extends Controller
         $avgReviews = 0;
         $avgRating = 0;
         $reviewCount = 0;
-        
+
         foreach ($top10 as $p) {
             if (isset($p['reviews'])) {
                 $avgReviews += $p['reviews'];
@@ -604,7 +706,7 @@ class SearchVolumeController extends Controller
                 $avgRating += $p['rating'];
             }
         }
-        
+
         $avgReviews = $reviewCount > 0 ? $avgReviews / $reviewCount : 0;
         $avgRating = $reviewCount > 0 ? $avgRating / $reviewCount : 4.0;
         $listingStrength = min(100, ($avgReviews / 50) * ($avgRating / 5) * 100);
@@ -627,13 +729,13 @@ class SearchVolumeController extends Controller
             fn($b) => !in_array($b, $placeholderBrands) && strlen($b) > 1
         );
         $brandDominance = 0;
-        
+
         if (count($brands) > 0) {
             // Count frequency of each brand
             $brandCounts = array_count_values($brands);
             $maxBrandCount = max($brandCounts);
             $totalWithBrand = count($brands);
-            
+
             // Dominance = (Most common brand count / total) * 100
             // If 1 brand owns 5/10 = 50%, if all different = 10% each
             $brandDominance = round(($maxBrandCount / $totalWithBrand) * 100);
@@ -651,7 +753,7 @@ class SearchVolumeController extends Controller
         // Level and recommendation
         $level = 'medium';
         $recommendation = 'Achievable with quality listing';
-        
+
         if ($kdScore < 20) {
             $level = 'very_easy';
             $recommendation = 'Great opportunity for new sellers';
@@ -783,14 +885,14 @@ class SearchVolumeController extends Controller
     private function estimateSalesFromBSR(string $marketplace, int $bsr, string $category): int
     {
         $constants = $this->getConstants($marketplace, $category);
-        
+
         $sales = $constants['C'] / pow($bsr, $constants['P']);
         $sales = max(min(round($sales), $constants['ceiling']), $constants['floor']);
-        
+
         // Cap at 49: If Amazon didn't show a sales badge, it means sales < 50
         // So even if BSR formula estimates higher, we know it's under 50
         $sales = min($sales, 49);
-        
+
         return (int) $sales;
     }
 
@@ -868,5 +970,84 @@ class SearchVolumeController extends Controller
             'created_at' => now(),
             'updated_at' => now()
         ]);
+    }
+
+    private function cacheProducts(string $marketplace, array $products): void
+    {
+        foreach ($products as $product) {
+            $asin = strtoupper(trim($product['asin'] ?? ''));
+            if ($asin === '') {
+                continue;
+            }
+
+            $monthlySales = $product['monthly_sales'] ?? null;
+            $monthlyBadge = $product['monthly_badge_value'] ?? null;
+            $source = null;
+
+            if ($monthlyBadge !== null && $monthlyBadge > 0) {
+                $source = 'badge';
+            } elseif (!empty($product['is_sales_estimated'])) {
+                $source = 'bsr_estimate';
+            } elseif ($monthlySales !== null && $monthlySales > 0) {
+                $source = 'hybrid';
+            }
+
+            DB::table('product_cache')->updateOrInsert(
+                [
+                    'asin' => $asin,
+                    'marketplace' => $marketplace,
+                ],
+                [
+                    'title' => $product['title'] ?? null,
+                    'category' => $product['bsr_category'] ?? $product['category'] ?? null,
+                    'bsr' => $product['bsr'] ?? null,
+                    'price' => $product['price'] ?? null,
+                    'monthly_badge_value' => $monthlyBadge,
+                    'monthly_sales_estimate' => $monthlySales,
+                    'monthly_sales_source' => $source,
+                    'last_scraped_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
+        }
+    }
+
+    /**
+     * Get cached search volume and sales metrics for a keyword
+     */
+    private function getCachedVolume(string $keyword, string $marketplace, bool $preferCachedVolume = false): ?array
+    {
+        // Bypass cache in Test Mode
+        try {
+            $testModeEnabled = DB::table('app_settings')
+                ->where('key', 'test_mode_enabled')
+                ->value('value');
+            if (filter_var($testModeEnabled, FILTER_VALIDATE_BOOLEAN)) {
+                return null;
+            }
+        } catch (\Exception $e) {
+            // Ignore DB exception
+        }
+
+        $cache = DB::table('keyword_cache')
+            ->where('marketplace', $marketplace)
+            ->where('keyword', $keyword)
+            ->first();
+
+        if (!$cache) {
+            return null;
+        }
+
+        return [
+            'estimated' => (int) $cache->search_volume_estimate,
+            'range' => [
+                'min' => (int) round($cache->search_volume_estimate * 0.7),
+                'max' => (int) round($cache->search_volume_estimate * 1.3)
+            ],
+            'confidence' => 'high',
+            'confidence_score' => 0.8,
+            'demand_level' => $cache->search_volume_estimate >= 3000 ? 'high' : ($cache->search_volume_estimate >= 1000 ? 'medium' : 'low'),
+            'source' => 'cache'
+        ];
     }
 }

@@ -77,7 +77,7 @@ class ConstantsController extends Controller
     {
         $settings = Cache::remember('app_settings', 300, function () {
             $rows = DB::table('app_settings')->get();
-            
+
             $result = [];
             foreach ($rows as $row) {
                 // Cast value based on type
@@ -96,7 +96,7 @@ class ConstantsController extends Controller
                 }
                 $result[$row->key] = $value;
             }
-            
+
             return $result;
         });
 
@@ -106,13 +106,26 @@ class ConstantsController extends Controller
             'search_page_products_limit' => 20,
             'search_page_bsr_parallel_requests' => 5,
             'search_page_bsr_delay_ms' => 300,
+
+            // Competitor Keyword Analyzer (Cerebro) settings
+            'cerebro_fetch_bsr_enabled' => true,
+            'cerebro_use_backend_cache' => true,
+            'cerebro_bsr_products_limit' => 20,
+            'cerebro_bsr_parallel_requests' => 3,
+            'cerebro_bsr_delay_ms' => 500,
+            'cerebro_search_delay_ms' => 500,
+            'cerebro_parallel_keywords' => 5,
             // Reverse ASIN settings
-            'reverse_asin_products_limit' => 10,
+            'reverse_asin_products_limit' => 20,
             'reverse_asin_bsr_parallel_requests' => 3,
             'reverse_asin_bsr_delay_ms' => 500,
             'reverse_asin_keywords_limit' => 50,
             'reverse_asin_search_delay_ms' => 1500,
             'reverse_asin_backend_batch_size' => 5,
+            // Test Mode settings
+            'test_mode_enabled' => false,
+            'test_mode_keyword' => 'portal scale body',
+            'test_mode_product_url' => 'https://www.amazon.eg/-/en/Portal-Accuracy-Digital-Kitchen-Scale/dp/B08P5MP4YC/ref=sr_1_2?crid=36LHSH8O6O2ES&dib=eyJ2IjoiMSJ9.byp1-SMWW_mZPJswYRC3P2tk2Yew88kCJajm3ZFck2nhXCOasuoJf2RJbbuWGRS-MJuIPlZ-T_uNgFVpN-11t-IrOqYC6BEvQ3_ThFuctNOS0zO6PRA7jebIlHTZTINKkpBkIpci2fdfZtTkdId7detczK02-VXD4t38Xg7InXtkbqj5CZGChq3n-TvakSe0Uf5J_a3a0YfxeZJzTqLcg7yda3647QWbZehfKtrk4l4BQEzS4AImvQRwOCyKYqtLR3raBl192ThqUMKR_Utqi55tMLVGDBoEcpW2yg57iZc.ZtlfuF8ML_Imdyqwweol8cl-OQhqEJB5HxZkgKQj4V8&dib_tag=se&keywords=portal+scale+body&qid=1779798144&sprefix=portal+scale+body%2Caps%2C209&sr=8-2',
         ];
 
         return response()->json([
@@ -128,7 +141,7 @@ class ConstantsController extends Controller
     {
         $settings = Cache::remember('magnet_settings', 300, function () {
             $rows = DB::table('magnet_settings')->get();
-            
+
             $result = [];
             foreach ($rows as $row) {
                 $value = $row->value;
@@ -140,7 +153,7 @@ class ConstantsController extends Controller
                 }
                 $result[$row->key] = $value;
             }
-            
+
             return $result;
         });
 

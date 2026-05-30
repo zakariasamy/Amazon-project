@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\WebAuthController;
 use App\Http\Controllers\CerebroWebController;
 use App\Http\Controllers\MagnetWebController;
+use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\Api\CerebroFolderController;
 use App\Http\Controllers\GuideController;
 
@@ -49,9 +50,11 @@ Route::middleware('guest')->group(function () {
 // Protected routes (authenticated users only)
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [WebAuthController::class, 'dashboard'])->name('dashboard');
+    Route::get('/settings', [AdminSettingsController::class, 'edit'])->name('admin.settings');
+    Route::post('/settings', [AdminSettingsController::class, 'update'])->name('admin.settings.update');
     Route::post('/logout', [WebAuthController::class, 'logout'])->name('logout');
     
-    // Cerebro / Keyword Analyzer Pro - Analyses
+    // Cerebro / Competitor Keyword Analyzer - Analyses
     Route::get('/cerebro', [CerebroWebController::class, 'index'])->name('cerebro.index');
     Route::get('/cerebro/{id}', [CerebroWebController::class, 'show'])->name('cerebro.show');
     Route::get('/cerebro/{id}/export', [CerebroWebController::class, 'export'])->name('cerebro.export');
