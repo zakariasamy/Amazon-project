@@ -1319,7 +1319,7 @@ class MagnetUI {
 
     getDashboardUrl() {
         // Get the API URL from ApiClient if available
-        return 'http://localhost:8000/magnet';
+        return 'http://127.0.0.1:8000/magnet';
     }
 
     formatNumber(num) {

@@ -66,6 +66,10 @@ class SerpParser {
                 if (!existing.monthly_sales && monthly_sales) existing.monthly_sales = monthly_sales;
                 if (!existing.image && image) existing.image = image;
                 if (!existing.brand && brand) existing.brand = brand;
+                if (!existing.seller_count) {
+                    const seller_count = this.extractSellerCount(card);
+                    if (seller_count) existing.seller_count = seller_count;
+                }
                 // Don't override is_sponsored if already true
                 if (is_sponsored) existing.is_sponsored = true;
             } else {
@@ -74,6 +78,8 @@ class SerpParser {
                     console.log(`SERP Parser: Skipping unavailable product ${asin} (no price)`);
                     return;
                 }
+
+                const seller_count = this.extractSellerCount(card);
 
                 position++;
                 productsMap.set(asin, {
@@ -88,7 +94,7 @@ class SerpParser {
                     is_sponsored,
                     monthly_sales,
                     category: null, // Not available on search page
-                    seller_count: null, // Will be enriched from product page
+                    seller_count, // Will be enriched from product page
                     image
                 });
             }
@@ -344,6 +350,42 @@ class SerpParser {
         return null;
     }
 
+    /**
+     * Extract seller count directly from search result card if present
+     */
+    extractSellerCount(card) {
+        // Method 1: Look for links pointing to offer listing or olp
+        const offerLinks = card.querySelectorAll('a[href*="offer-listing"], a[href*="olp"], a[href*="/gp/aod/"], a[data-action="s-show-all-offers-display"]');
+        for (const link of offerLinks) {
+            const text = link.textContent?.trim() || '';
+            // Match pattern like "(X new offers)", "(X offers)", "(X new offer)"
+            // Also handles Arabic e.g. "(X عروض جديدة)" or "(X جديد)"
+            const match = text.match(/\(?(\d+)\s*(?:new\s+)?(?:offers?|sellers?|جديد|مستعمل|عروض|بائع)/i) || text.match(/\((\d+)\)/);
+            if (match) {
+                const count = parseInt(match[1], 10);
+                if (count > 0) {
+                    console.log(`SerpParser: Found ${count} sellers directly from card link text: "${text}"`);
+                    return count;
+                }
+            }
+        }
+
+        // Method 2: Check card text for "More Buying Choices" or Arabic equivalent
+        const cardText = card.textContent || '';
+        const buyingChoicesPattern = /(?:More Buying Choices|خيارات شراء أخرى).*?\b(\d+)\s*(?:new\s+)?(?:offers?|sellers?|جديد|مستعمل|عروض|بائع)/i;
+        const textMatch = cardText.match(buyingChoicesPattern);
+        if (textMatch) {
+            const count = parseInt(textMatch[1], 10);
+            if (count > 0) {
+                console.log(`SerpParser: Found ${count} sellers directly from card text match`);
+                return count;
+            }
+        }
+
+        // Default to null (will be enriched via BSR fetching, or default to 1 if skipped and remains null)
+        return null;
+    }
+
     isSponsored(card) {
         const sponsoredEl = card.querySelector('.s-label-popover-default, [data-component-type="sp-sponsored-result"]');
         const text = card.textContent.toLowerCase();
@@ -406,11 +448,15 @@ class SerpParser {
         const BATCH_DELAY = options.batchDelay || 500;
         const onProgress = options.onProgress || null;
 
-        // Enrich ALL top products to get BSR and category (not just those without sales)
+        // Enrich products that need BSR data (skip if they already have BSR and category)
         const needsEnrichment = products
             .slice(0, TOP_N)
             .map((p, idx) => ({ product: p, originalIdx: idx }))
-            .filter(item => !item.product.bsr || !item.product.category); // Skip if already have BSR and category
+            .filter(item => {
+                const hasBsr = !!item.product.bsr && !!item.product.category;
+                // Don't skip enrichment even if they have sales badge, because we need category, brand, BSR and actual sellers
+                return !hasBsr;
+            });
 
         if (needsEnrichment.length === 0) {
             console.log('All products already have BSR data');
@@ -458,8 +504,13 @@ class SerpParser {
 
                     // Store seller count
                     if (result.seller_count !== null && result.seller_count !== undefined) {
-                        enriched[originalIdx].seller_count = result.seller_count;
-                        console.log(`Got ${result.seller_count} sellers for ${batch[idx].product.asin}`);
+                        const existingCount = enriched[originalIdx].seller_count;
+                        if (existingCount !== null && existingCount !== undefined) {
+                            enriched[originalIdx].seller_count = Math.max(existingCount, result.seller_count);
+                        } else {
+                            enriched[originalIdx].seller_count = result.seller_count;
+                        }
+                        console.log(`Got ${result.seller_count} sellers for ${batch[idx].product.asin} (final: ${enriched[originalIdx].seller_count})`);
                     }
                 }
             });

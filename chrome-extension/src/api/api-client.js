@@ -3,7 +3,7 @@
 
 class ApiClient {
     constructor() {
-        this.baseUrl = 'http://localhost:8000'; // Development URL
+        this.baseUrl = 'http://127.0.0.1:8000'; // Development URL
         this.token = null;
         this.initialized = false;
     }

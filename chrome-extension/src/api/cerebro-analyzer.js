@@ -3,12 +3,16 @@
 
 class CerebroAnalyzer {
     constructor(marketplace = 'amazon.com') {
-        this.marketplace = marketplace;
+        this.marketplace = this.normalizeMarketplace(marketplace);
         this.maxAsins = 10;
         this.asins = [];
         this.results = new Map(); // keyword -> data
         this.isRunning = false;
         this.onProgress = null;
+
+        // Backend URL resolution (avoid hardcoded URLs drifting across modules)
+        // Priority: global ApiClient instance -> window.API_CONFIG -> localhost fallback
+        this.backendBaseUrlFallback = 'http://127.0.0.1:8000';
 
         // Configuration
         this.config = {
@@ -18,6 +22,46 @@ class CerebroAnalyzer {
             delayBetweenAsins: 2000,
             delayBetweenKeywords: 500
         };
+    }
+
+    parseBooleanSetting(value, defaultValue = false) {
+        if (value === undefined || value === null) return defaultValue;
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'number') return value !== 0;
+
+        const s = String(value).trim().toLowerCase();
+        if (s === '1' || s === 'true' || s === 'yes' || s === 'on') return true;
+        if (s === '0' || s === 'false' || s === 'no' || s === 'off' || s === '') return false;
+        return defaultValue;
+    }
+
+    normalizeMarketplace(marketplace) {
+        const raw = (marketplace || '').toString().trim().toLowerCase();
+        if (!raw) return 'amazon.com';
+
+        // Strip protocol/path and common subdomains
+        const withoutProto = raw.replace(/^https?:\/\//, '');
+        const hostname = withoutProto.split('/')[0] || withoutProto;
+        const cleaned = hostname.replace(/^(www\.|smile\.|m\.)/i, '');
+
+        if (cleaned.endsWith('amazon.co.uk')) return 'amazon.co.uk';
+        if (cleaned.endsWith('amazon.com')) return 'amazon.com';
+        if (cleaned.endsWith('amazon.eg')) return 'amazon.eg';
+        if (cleaned.endsWith('amazon.de')) return 'amazon.de';
+
+        return cleaned;
+    }
+
+    getBackendBaseUrl() {
+        try {
+            if (typeof window !== 'undefined') {
+                if (window.ApiClient && window.ApiClient.baseUrl) return window.ApiClient.baseUrl;
+                if (window.API_CONFIG && window.API_CONFIG.baseUrl) return window.API_CONFIG.baseUrl;
+            }
+        } catch (e) {
+            // ignore
+        }
+        return this.backendBaseUrlFallback;
     }
 
     /**
@@ -45,28 +89,163 @@ class CerebroAnalyzer {
         try {
             this.updateProgress(0, 'Starting analysis...');
 
-            // Step 1: Analyze each ASIN individually
-            const asinResults = [];
+            // Fetch configuration from backend
+            try {
+                const baseUrl = this.getBackendBaseUrl();
+                const configResponse = await fetch(`${baseUrl}/api/settings`);
+                if (configResponse.ok) {
+                    const configData = await configResponse.json();
+                    const settings = configData.settings || {};
+
+                    this.fetchBsrEnabled = this.parseBooleanSetting(settings.cerebro_fetch_bsr_enabled, false);
+                    this.testModeEnabled = this.parseBooleanSetting(settings.test_mode_enabled, false);
+                    this.useBackendCache = this.testModeEnabled ? false : this.parseBooleanSetting(settings.cerebro_use_backend_cache, true);
+                    this.testModeKeyword = settings.test_mode_keyword || 'portal scale body';
+                    this.testModeProductUrl = settings.test_mode_product_url || '';
+
+                    this.bsrProductsLimit = parseInt(settings.cerebro_bsr_products_limit) || 20;
+                    this.bsrParallelRequests = parseInt(settings.cerebro_bsr_parallel_requests) || 3;
+                    this.bsrDelayMs = parseInt(settings.cerebro_bsr_delay_ms) || 500;
+                    this.parallelKeywords = parseInt(settings.cerebro_parallel_keywords) || 5;
+
+                    console.log('[Cerebro] Settings loaded:', {
+                        fetchBsrEnabled: this.fetchBsrEnabled,
+                        useBackendCache: this.useBackendCache,
+                        bsrProductsLimit: this.bsrProductsLimit,
+                        bsrParallelRequests: this.bsrParallelRequests,
+                        bsrDelayMs: this.bsrDelayMs,
+                        parallelKeywords: this.parallelKeywords,
+                        testModeEnabled: this.testModeEnabled
+                    });
+                }
+            } catch (e) {
+                console.warn('Failed to fetch settings, using defaults');
+                this.fetchBsrEnabled = false;
+                this.testModeEnabled = false;
+                this.useBackendCache = true;
+                this.testModeKeyword = 'portal scale body';
+                this.testModeProductUrl = '';
+                this.bsrProductsLimit = 20;
+                this.bsrParallelRequests = 3;
+                this.bsrDelayMs = 500;
+                this.parallelKeywords = 5;
+            }
+
+            // Phase 1: Aggregate keywords for all ASINs
+            this.updateProgress(5, 'Extracting keywords for all products...');
+            
+            const allKeywordsSet = new Set();
+            const productInfos = {};
+            const asinResultsMap = {};
+            
             for (let i = 0; i < this.asins.length; i++) {
                 if (!this.isRunning) break;
-
                 const asin = this.asins[i];
-                const percent = Math.round((i / this.asins.length) * 70);
-                this.updateProgress(percent, `Analyzing ASIN ${i + 1}/${this.asins.length}: ${asin}`);
-
-                try {
-                    const result = await this.analyzeAsin(asin);
-                    asinResults.push({ asin, result });
-                } catch (error) {
-                    console.error(`Error analyzing ${asin}:`, error);
-                    asinResults.push({ asin, error: error.message });
+                this.updateProgress(5 + Math.round((i / this.asins.length) * 15), `Extracting keywords for ASIN ${i + 1}/${this.asins.length}: ${asin}`);
+                
+                let productInfo = this.getProductInfoFromSearchPage(asin);
+                if (!productInfo || !productInfo.title) {
+                    productInfo = await this.getProductInfoFromProductPage(asin);
                 }
-
-                // Delay between ASINs to avoid rate limiting
+                
+                asinResultsMap[asin] = {
+                    asin: asin,
+                    result: {
+                        productInfo: productInfo,
+                        title: productInfo?.title || '',
+                        keywords: []
+                    },
+                    error: productInfo ? null : 'Product not found'
+                };
+                
+                if (productInfo && productInfo.title) {
+                    productInfos[asin] = productInfo;
+                    const seedKeywords = this.extractSeedKeywords(productInfo.title);
+                    
+                    const currentQuery = this.getCurrentSearchQuery();
+                    if (currentQuery && !seedKeywords.includes(currentQuery.toLowerCase())) {
+                        seedKeywords.unshift(currentQuery.toLowerCase());
+                    }
+                    
+                    // Add seeds immediately
+                    seedKeywords.slice(0, 10).forEach(k => allKeywordsSet.add(k));
+                    
+                    // Fetch suggestions
+                    const suggestions = await this.getAmazonSuggestionsForSeeds(seedKeywords.slice(0, 3));
+                    suggestions.forEach(k => allKeywordsSet.add(k));
+                }
+                
                 if (i < this.asins.length - 1 && this.isRunning) {
-                    await this.delay(this.config.delayBetweenAsins);
+                    await this.delay(300); // Shorter delay, not hammering search API
                 }
             }
+            
+            // Limit to 50 unique keywords to keep search fast
+            let allKeywords = [...allKeywordsSet].slice(0, 50);
+            if (this.testModeEnabled) {
+                allKeywords = [this.testModeKeyword];
+                console.log(`[Cerebro] Test Mode Active: FORCE analyzing only one keyword: "${allKeywords[0]}"`);
+            }
+            console.log(`[Cerebro] Aggregated ${allKeywords.length} unique keywords for ${this.asins.length} ASINs`);
+            
+            // Pre-fetch cached volumes from backend if enabled
+            let cachedVolumesMap = {};
+            if (this.useBackendCache) {
+                this.updateProgress(20, 'Checking backend cache for existing search volumes...');
+                cachedVolumesMap = await this.fetchCachedVolumes(allKeywords);
+                console.log(`[Cerebro] Found ${Object.keys(cachedVolumesMap).length} cached volumes`);
+            }
+
+            // Phase 2: Single-pass search (Batched)
+            const batchSize = this.parallelKeywords || 5; // Search multiple keywords concurrently
+            for (let i = 0; i < allKeywords.length; i += batchSize) {
+                if (!this.isRunning) break;
+                
+                const batch = allKeywords.slice(i, i + batchSize);
+                
+                this.updateProgress(
+                    20 + Math.round((i / allKeywords.length) * 50),
+                    `Searching keywords ${i + 1} to ${Math.min(i + batchSize, allKeywords.length)} of ${allKeywords.length}...`
+                );
+                
+                const batchPromises = batch.map(async (keyword) => {
+                    try {
+                        const cachedVolume = cachedVolumesMap[keyword] || null;
+                        // searchAndFindAsins returns positions for ALL matching target ASINs
+                        const searchData = await this.searchAndFindAsins(keyword, this.asins, cachedVolume);
+                        if (searchData && searchData.found_asins) {
+                            for (const [foundAsin, data] of Object.entries(searchData.found_asins)) {
+                                if (asinResultsMap[foundAsin]) {
+                                    asinResultsMap[foundAsin].result.keywords.push({
+                                        keyword: keyword,
+                                        position: data.position,
+                                        estimated_volume: searchData.estimated_volume || 0,
+                                        difficulty_score: searchData.difficulty_score ?? 0,
+                                        difficulty_level: searchData.difficulty_level ?? null,
+                                        competing_products: searchData.competing_products || 0,
+                                        is_sponsored: data.is_sponsored || false,
+                                        sponsored_count: searchData.sponsored_count || 0,
+                                        title_density: searchData.title_density || 0,
+                                        total_click_share: searchData.total_click_share || 0,
+                                        total_page_sales: searchData.total_page_sales || 0,
+                                        avg_reviews: searchData.avg_reviews || 0
+                                    });
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.warn(`[Cerebro] Error searching for "${keyword}":`, e);
+                    }
+                });
+
+                await Promise.all(batchPromises);
+                
+                if (i + batchSize < allKeywords.length) {
+                    await this.delay(this.config.delayBetweenKeywords || 800);
+                }
+            }
+            
+            const asinResults = Object.values(asinResultsMap);
 
             // Step 2: Merge results across all ASINs
             this.updateProgress(75, 'Merging keyword data...');
@@ -76,10 +255,10 @@ class CerebroAnalyzer {
             this.updateProgress(85, 'Calculating IQ scores and metrics...');
             const enrichedKeywords = this.calculateMetrics(mergedKeywords);
 
-            // Step 4: Sort by opportunity (IQ score)
-            this.updateProgress(95, 'Sorting by opportunity...');
+            // Step 4: Sort by Search Volume
+            this.updateProgress(95, 'Sorting by search volume...');
             const sortedKeywords = enrichedKeywords.sort((a, b) =>
-                (b.cerebro_iq_score || 0) - (a.cerebro_iq_score || 0)
+                (b.search_volume || 0) - (a.search_volume || 0)
             );
 
             this.updateProgress(100, 'Analysis complete!');
@@ -107,92 +286,6 @@ class CerebroAnalyzer {
             this.isRunning = false;
             throw error;
         }
-    }
-
-    /**
-     * Analyze a single ASIN - extracts product info from search page and finds ranking keywords
-     * Uses a hybrid approach: gets product data from search results + Amazon suggestions
-     */
-    async analyzeAsin(asin) {
-        console.log(`[Cerebro] Analyzing ASIN: ${asin}`);
-
-        // Get product info from the search results page (already loaded)
-        let productInfo = this.getProductInfoFromSearchPage(asin);
-
-        if (!productInfo || !productInfo.title) {
-            console.warn(`[Cerebro] Could not find product info for ${asin} on search page. Fetching product page as fallback...`);
-            productInfo = await this.getProductInfoFromProductPage(asin);
-        }
-
-        if (!productInfo || !productInfo.title) {
-            console.warn(`[Cerebro] Could not find product info for ${asin} on page`);
-            return { keywords: [], error: 'Product not found on page' };
-        }
-
-        console.log(`[Cerebro] Found product: ${productInfo.title.substring(0, 50)}...`);
-
-        // Extract seed keywords from product title
-        const seedKeywords = this.extractSeedKeywords(productInfo.title);
-        console.log(`[Cerebro] Seed keywords: ${seedKeywords.slice(0, 5).join(', ')}`);
-
-        // Also use the current search query if available
-        const currentQuery = this.getCurrentSearchQuery();
-        if (currentQuery && !seedKeywords.includes(currentQuery.toLowerCase())) {
-            seedKeywords.unshift(currentQuery.toLowerCase());
-        }
-
-        // Get Amazon suggestions for seed keywords
-        const suggestions = await this.getAmazonSuggestionsForSeeds(seedKeywords.slice(0, 5));
-
-        // Combine and deduplicate
-        const allKeywords = [...new Set([...seedKeywords, ...suggestions])].slice(0, 30);
-        console.log(`[Cerebro] Total keywords to check: ${allKeywords.length}`);
-
-        // Search for each keyword and check if this ASIN ranks
-        const rankedKeywords = [];
-
-        for (let i = 0; i < allKeywords.length; i++) {
-            const keyword = allKeywords[i];
-            this.updateProgress(
-                Math.round((i / allKeywords.length) * 100),
-                `Checking "${keyword}" for ${asin.substring(0, 6)}...`
-            );
-
-            try {
-                const result = await this.searchAndFindAsin(keyword, asin);
-                if (result && result.position > 0) {
-                    rankedKeywords.push({
-                        keyword: keyword,
-                        position: result.position,
-                        estimated_volume: result.estimated_volume || 0,
-                        competing_products: result.competing_products || 0,
-                        is_sponsored: result.is_sponsored || false,
-                        sponsored_count: result.sponsored_count || 0,
-                        title_density: result.title_density || 0,
-                        total_click_share: result.total_click_share || 0,
-                        total_page_sales: result.total_page_sales || 0,
-                        avg_reviews: result.avg_reviews || 0
-                    });
-                    console.log(`[Cerebro] ${asin} ranks #${result.position} for "${keyword}" | sponsored=${result.sponsored_count} density=${result.title_density} clickShare=${result.total_click_share}%`);
-                }
-            } catch (e) {
-                console.warn(`[Cerebro] Error searching for "${keyword}":`, e);
-            }
-
-            // Delay between searches to avoid rate limiting
-            if (i < allKeywords.length - 1) {
-                await this.delay(this.config.delayBetweenKeywords || 800);
-            }
-        }
-
-        console.log(`[Cerebro] Found ${rankedKeywords.length} keywords for ${asin}`);
-
-        return {
-            asin: asin,
-            productInfo: productInfo,
-            title: productInfo.title,
-            keywords: rankedKeywords
-        };
     }
 
     /**
@@ -427,30 +520,81 @@ class CerebroAnalyzer {
     }
 
     /**
-     * Search for a keyword and find if the ASIN ranks
+     * Fetch cached search volumes from backend for a batch of keywords
+     */
+    async fetchCachedVolumes(keywords) {
+        if (!keywords || keywords.length === 0) return {};
+        
+        try {
+            const baseUrl = this.getBackendBaseUrl();
+            
+            // Backend might have limits on array size, chunk if necessary (e.g., 50 at a time)
+            const chunkSize = 50;
+            let results = {};
+            
+            for (let i = 0; i < keywords.length; i += chunkSize) {
+                const chunk = keywords.slice(i, i + chunkSize);
+                
+                const response = await fetch(`${baseUrl}/api/search-volume/batch-cached`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        keywords: chunk,
+                        marketplace: this.marketplace
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.cached_volumes) {
+                        results = { ...results, ...data.cached_volumes };
+                    }
+                }
+            }
+            return results;
+        } catch (e) {
+            console.warn('[Cerebro] Failed to fetch cached volumes:', e);
+            return {};
+        }
+    }
+
+    /**
+     * Search for a keyword and find if multiple ASINs rank
      * Uses direct fetch (same-origin request from Amazon page)
      */
-    async searchAndFindAsin(keyword, targetAsin) {
+    async searchAndFindAsins(keyword, targetAsins, cachedVolumeData = null) {
         // Use same origin to ensure no CORS issues
         const origin = window.location.origin; // e.g., https://www.amazon.eg
         const searchUrl = `${origin}/s?k=${encodeURIComponent(keyword)}`;
 
         try {
-            // Direct fetch works because we're on an Amazon page (same-origin)
-            const response = await fetch(searchUrl, {
-                method: 'GET',
-                credentials: 'include', // Include cookies for logged-in state
-                headers: {
-                    'Accept': 'text/html,application/xhtml+xml',
+            let html = this.testModeEnabled ? null : this.getCachedHtml(keyword);
+
+            if (!html) {
+                // Direct fetch works because we're on an Amazon page (same-origin)
+                const response = await fetch(searchUrl, {
+                    method: 'GET',
+                    credentials: 'include', // Include cookies for logged-in state
+                    headers: {
+                        'Accept': 'text/html,application/xhtml+xml',
+                    }
+                });
+
+                if (!response.ok) {
+                    console.warn(`[Cerebro] Search returned ${response.status} for "${keyword}"`);
+                    return null;
                 }
-            });
 
-            if (!response.ok) {
-                console.warn(`[Cerebro] Search returned ${response.status} for "${keyword}"`);
-                return null;
+                html = await response.text();
+                if (!this.testModeEnabled) {
+                    this.setCachedHtml(keyword, html);
+                }
+            } else {
+                console.log(`[Cerebro] Using cached HTML for "${keyword}" (Development/Debug Mode)`);
             }
-
-            const html = await response.text();
 
             // Check if we got a valid search page (not captcha or error)
             if (html.includes('captcha') || html.includes('Enter the characters')) {
@@ -461,20 +605,23 @@ class CerebroAnalyzer {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
 
-            // Find all products - try multiple selectors
-            const products = doc.querySelectorAll('[data-asin]:not([data-asin=""])');
+            // Find products from the MAIN results container (avoid carousels/related widgets)
+            const mainResultsContainer = doc.querySelector('.s-main-slot.s-result-list.s-search-results');
+            const products = mainResultsContainer
+                ? mainResultsContainer.querySelectorAll('[data-component-type="s-search-result"][data-asin]:not([data-asin=""])')
+                : doc.querySelectorAll('[data-asin]:not([data-asin=""])');
 
             // Debug: Log first few ASINs found
             const foundAsins = Array.from(products).slice(0, 10).map(p => p.getAttribute('data-asin'));
             console.log(`[Cerebro] "${keyword}": Found ${products.length} products. ASINs:`, foundAsins.slice(0, 5));
 
-            let position = 0;
-            let isSponsored = false;
-            const targetAsinUpper = targetAsin.toUpperCase();
+            const foundAsinsMap = {};
+            const targetAsinsUpper = new Set(targetAsins.map(a => a.toUpperCase()));
 
             let sponsoredCount = 0;
             let titleDensity = 0;
-            let totalPageSales = 0;
+            const productSalesData = [];
+            const cardProductsForBackend = [];
             let totalReviews = 0;
             let reviewCount = 0;
             const keywordLower = keyword.toLowerCase().trim();
@@ -508,23 +655,29 @@ class CerebroAnalyzer {
                     }
                 }
 
-                // Extract product title for title density
+                // Extract product title for title density (matching SerpParser logic)
                 let title = '';
-                const titleSelectors = [
-                    'h2.a-size-mini a span.a-text-normal',
-                    'h2 a.a-link-normal span',
-                    '[data-cy="title-recipe"] a span',
-                    'h2 a span:not(.a-color-secondary)',
-                    '.a-size-base-plus.a-color-base'
-                ];
-                for (const selector of titleSelectors) {
-                    const el = productCard.querySelector(selector);
-                    if (el) {
-                        const text = el.textContent?.trim() || '';
-                        if (text && !text.toLowerCase().includes('sponsor')) {
-                            title = text;
-                            break;
+                const h2Element = productCard.querySelector('h2');
+                if (h2Element) {
+                    const ariaLabel = h2Element.getAttribute('aria-label');
+                    if (ariaLabel) {
+                        title = ariaLabel.replace(/^Sponsored Ad\s*[–-]\s*/i, '').trim();
+                    } else {
+                        const titleSpan = h2Element.querySelector('span');
+                        if (titleSpan) {
+                            let spanText = titleSpan.textContent?.trim() || '';
+                            spanText = spanText.replace(/^Sponsored\s*/gi, '').trim();
+                            if (spanText && spanText !== 'Sponsored') {
+                                title = spanText;
+                            }
                         }
+                    }
+                }
+                if (!title) {
+                    const titleEl = productCard.querySelector('.s-title-instructions-style span, [data-cy="title-recipe"] span');
+                    if (titleEl) {
+                        title = titleEl.textContent?.trim() || '';
+                        title = title.replace(/^Sponsored\s*/gi, '').trim();
                     }
                 }
                 if (!title) {
@@ -551,6 +704,7 @@ class CerebroAnalyzer {
                     '.a-size-small'
                 ];
                 let cardSales = 0;
+                let hasBadge = false;
                 // Search entire card text for "X bought in past month" pattern
                 const fullCardText = productCard.textContent || '';
                 // English: "1K+", "500+", "50" etc. before "bought in past month"
@@ -567,23 +721,77 @@ class CerebroAnalyzer {
                     } else {
                         cardSales = parseInt(raw) || 0;
                     }
+                    hasBadge = true;
                 }
-                totalPageSales += cardSales;
+                productSalesData.push({ position: i + 1, sales: cardSales, hasBadge: hasBadge });
 
-                // ── Scrape review count per card (for search volume estimation) ──
-                const reviewsEl = productCard.querySelector('.a-size-base.s-underline-text, .a-size-base.s-underline-link-text');
-                if (reviewsEl) {
-                    let revText = reviewsEl.textContent?.replace(/[^\d]/g, '') || '';
-                    const revNum = parseInt(revText);
-                    if (revNum > 0) { totalReviews += revNum; reviewCount++; }
+                // ── Scrape rating + review count per card (needed for KD) ─────────
+                let rating = 0;
+                let reviews = 0;
+
+                // Rating (e.g. "4.3 out of 5 stars")
+                const ratingEl = productCard.querySelector('[aria-label*="out of 5"], .a-icon-star-small .a-icon-alt, .a-icon-star .a-icon-alt');
+                if (ratingEl) {
+                    const text = ratingEl.getAttribute('aria-label') || ratingEl.textContent || '';
+                    const match = text.match(/([\d.]+)/);
+                    rating = match ? parseFloat(match[1]) : 0;
+                }
+
+                // Reviews count
+                const ratingLinks = productCard.querySelectorAll('a[aria-label*="rating"], a[aria-label*="review"], [href*="#customerReviews"]');
+                for (const link of ratingLinks) {
+                    const ariaLabel = link.getAttribute('aria-label') || '';
+                    const match = ariaLabel.match(/(\d[\d,]*)\s*(?:rating|review)/i);
+                    if (match) {
+                        reviews = parseInt(match[1].replace(/,/g, '')) || 0;
+                        break;
+                    }
+                    const text = (link.textContent || '').replace(/[^\d]/g, '');
+                    if (text) {
+                        reviews = parseInt(text) || 0;
+                        break;
+                    }
+                }
+
+                // Fallback selectors used on some marketplaces
+                if (!reviews) {
+                    const reviewsEl = productCard.querySelector('.a-size-base.s-underline-text, .a-size-base.s-underline-link-text, [data-cy="reviews-block"], .a-row.a-size-small');
+                    if (reviewsEl) {
+                        const revText = (reviewsEl.textContent || '').replace(/[^\d]/g, '');
+                        reviews = parseInt(revText) || 0;
+                    }
+                }
+
+                if (reviews > 0) {
+                    totalReviews += reviews;
+                    reviewCount++;
+                }
+
+                // Keep a clean per-card record for backend KD/volume calculations
+                const asinForBackend = (productCard.getAttribute('data-asin') || '').toUpperCase();
+                if (asinForBackend) {
+                    cardProductsForBackend.push({
+                        asin: asinForBackend,
+                        position: i + 1,
+                        bsr: null,
+                        price: 0,
+                        reviews,
+                        rating,
+                        is_sponsored: isProductSponsored,
+                        monthly_sales: cardSales,
+                        category: null,
+                        brand: null
+                    });
                 }
 
                 // Find our target ASIN's position
                 const asin = (productCard.getAttribute('data-asin') || '').toUpperCase();
-                if (asin === targetAsinUpper) {
-                    position = i + 1;
-                    isSponsored = isProductSponsored;
-                    console.log(`[Cerebro] ✓ FOUND ${targetAsin} at position ${position} for "${keyword}"`);
+                if (targetAsinsUpper.has(asin)) {
+                    foundAsinsMap[asin] = {
+                        position: i + 1,
+                        is_sponsored: isProductSponsored
+                    };
+                    console.log(`[Cerebro] ✓ FOUND ${asin} at position ${i + 1} for "${keyword}"`);
                 }
             }
 
@@ -597,9 +805,129 @@ class CerebroAnalyzer {
             // Average reviews across cards on this page (used to tune the volume estimate)
             const avgReviews = reviewCount > 0 ? Math.round(totalReviews / reviewCount) : 0;
 
-            // ── Search Volume — same formula as Magnet Analyzer ──
-            // estimateSearchVolume(competingProducts, avgReviews) = sqrt(competing) * 50 * reviewMultiplier
-            const estimated_volume = this.estimateSearchVolume(competingProducts, avgReviews);
+            // Use the same SerpV2 search volume calculation as Reverse ASIN and backend
+            let estimated_volume = 0;
+            let difficulty_score = 0;
+            let difficulty_level = null;
+
+            // ── Calculate Hybrid Page Sales (Market Analysis calculations) ──
+            let totalPageSales = 0;
+            let serpProducts = null;
+            
+            // Bypass BSR fetching if a cached volume exists and is high confidence
+            const hasGoodCache = cachedVolumeData && cachedVolumeData.estimated > 0;
+            
+            if (typeof SerpParser !== 'undefined') {
+                const serpParser = new SerpParser(doc);
+                serpProducts = serpParser.extractProducts();
+                
+                if (this.fetchBsrEnabled && !hasGoodCache) {
+                    // Slice immediately to the limit so only the top N products are enriched
+                    // AND sent to the backend — this ensures position ordering matches Reverse ASIN exactly
+                    serpProducts = serpProducts.slice(0, this.bsrProductsLimit || 20);
+                    
+                    const enrichOptions = {
+                        limit: this.bsrProductsLimit || 20,
+                        batchSize: this.bsrParallelRequests || 3,
+                        batchDelay: this.bsrDelayMs || 500
+                    };
+                    
+                    console.log(`[Cerebro] Fetching BSR for ${serpProducts.length} products for "${keyword}"...`);
+                    serpProducts = await serpParser.enrichWithBSR(serpProducts, enrichOptions);
+                }
+            }
+
+            if (serpProducts) {
+                titleDensity = 0;
+                for (let i = 0; i < serpProducts.length; i++) {
+                    const item = serpProducts[i];
+                    if (item.monthly_sales && item.monthly_sales > 0) {
+                        totalPageSales += item.monthly_sales;
+                    } else if (item.bsr && item.bsr > 0) {
+                        totalPageSales += this.estimateSalesFromBSR(item.bsr);
+                    }
+                    // Recalculate title density using highly accurate SerpParser titles
+                    if (item.title && item.title.toLowerCase().includes(keywordLower)) {
+                        titleDensity++;
+                    }
+                }
+            } else {
+                if (hasGoodCache && this.fetchBsrEnabled) {
+                    console.log(`[Cerebro] Bypassed BSR fetch for "${keyword}" (used backend cache)`);
+                }
+                // If a product does not have a badge, we just skip it (or it stays 0).
+                // The new SerpV2 search volume calculation correctly weights only products with sales/badges.
+                for (const item of productSalesData) {
+                    if (item.hasBadge) {
+                        totalPageSales += item.sales;
+                    }
+                }
+            }
+
+            // Calculate search volume using the backend API for perfect consistency across tools
+            const baseUrl = this.getBackendBaseUrl();
+            
+            try {
+                // Ensure all products sent to backend have required fields
+                const backendProducts = (serpProducts || cardProductsForBackend).map(p => ({
+                    asin: p.asin || 'N/A',
+                    position: p.position,
+                    bsr: p.bsr || null,
+                    price: p.price || 0,
+                    reviews: (p.reviews != null ? p.reviews : 0),
+                    rating: (p.rating != null ? p.rating : 0),
+                    is_sponsored: !!(p.is_sponsored || p.sponsored),
+                    monthly_sales: p.monthly_sales || p.sales || 0,
+                    category: p.category || p.bsr_category || null,
+                    brand: p.brand || null
+                }));
+
+                // Slice to the bsrProductsLimit (default 20) for 100% calculation parity with Market Analysis
+                const limit = this.bsrProductsLimit || 20;
+                const slicedBackendProducts = backendProducts.slice(0, limit);
+
+                console.log(`[Cerebro] Requesting backend search volume estimate (limited to top ${limit} products) for "${keyword}"...`);
+                const response = await fetch(`${baseUrl}/api/search-volume/estimate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Tool-Source': 'cerebro'
+                    },
+                    body: JSON.stringify({
+                        keyword: keyword,
+                        marketplace: this.marketplace,
+                        products: slicedBackendProducts,
+                        prefer_cached_volume: !this.testModeEnabled // Skip cache if in test mode
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.search_volume) {
+                        estimated_volume = data.search_volume.estimated;
+                        if (data.difficulty) {
+                            difficulty_score = data.difficulty.score ?? 0;
+                            difficulty_level = data.difficulty.level ?? null;
+                        }
+                        console.log(`[Cerebro] Backend estimate for "${keyword}": volume=${estimated_volume} KD=${difficulty_score}`);
+                    } else {
+                        throw new Error("Invalid response structure");
+                    }
+                } else {
+                    throw new Error(`HTTP error ${response.status}`);
+                }
+            } catch (e) {
+                console.warn(`[Cerebro] Backend estimation failed for "${keyword}", using local fallback:`, e);
+                const productsForVolume = serpProducts ? serpProducts : productSalesData;
+                estimated_volume = this.calculateSearchVolumeSerpV2(productsForVolume);
+            }
+            
+            // Override with cached volume if it exists and is more reliable (i.e. is non-zero)
+            if (hasGoodCache && !estimated_volume) {
+                // If the backend has a high-quality volume estimation, prefer it
+                estimated_volume = cachedVolumeData.estimated;
+            }
 
             // -----------------------------------------------------------------------
             // Top 3 Sales Share: estimated % of total page sales captured by the
@@ -640,12 +968,15 @@ class CerebroAnalyzer {
             console.log(`[Cerebro] "${keyword}": organic=${organicProducts.length} sponsored=${sponsoredCount} top3Share=${top3SalesShare.toFixed(1)}% pageSales=${totalPageSales} volume=${estimated_volume} avgReviews=${avgReviews}`);
 
             return {
-                position,
-                is_sponsored: isSponsored,
+                keyword,
+                found_asins: foundAsinsMap,
                 competing_products: competingProducts,
                 estimated_volume,
+                difficulty_score,
+                difficulty_level,
                 avg_reviews: avgReviews,
                 sponsored_count: sponsoredCount,
+                total_page_products: sponsoredCount + organicProducts.length,
                 title_density: titleDensity,
                 total_click_share: Math.round(top3SalesShare * 10) / 10,
                 total_page_sales: totalPageSales
@@ -677,11 +1008,13 @@ class CerebroAnalyzer {
                         avg_reviews: kw.avg_reviews || 0,
                         title_density: kw.title_density || 0,
                         sponsored_count: kw.sponsored_count || 0,
+                        total_page_products: kw.total_page_products || 0,
                         avg_price: kw.avg_price || 0,
                         avg_bsr: kw.avg_bsr || 0,
                         total_sales: kw.total_sales || 0,
                         total_page_sales: kw.total_page_sales || 0,
                         difficulty_score: kw.difficulty_score || 0,
+                        difficulty_level: kw.difficulty_level || null,
                         organic_ranks: {},
                         sponsored_ranks: {},
                         asins_ranking: 0,
@@ -709,6 +1042,7 @@ class CerebroAnalyzer {
                 }
                 if (kw.sponsored_count > existing.sponsored_count) {
                     existing.sponsored_count = kw.sponsored_count;
+                    existing.total_page_products = kw.total_page_products || existing.total_page_products;
                 }
                 if (kw.total_click_share > (existing.total_click_share || 0)) {
                     existing.total_click_share = kw.total_click_share;
@@ -721,6 +1055,12 @@ class CerebroAnalyzer {
                 if ((kw.avg_reviews || 0) > (existing.avg_reviews || 0)) {
                     existing.avg_reviews = kw.avg_reviews;
                 }
+
+                // Keep highest difficulty score seen (worst-case competitiveness)
+                if ((kw.difficulty_score || 0) > (existing.difficulty_score || 0)) {
+                    existing.difficulty_score = kw.difficulty_score || 0;
+                    existing.difficulty_level = kw.difficulty_level || existing.difficulty_level;
+                }
             }
         }
 
@@ -732,12 +1072,15 @@ class CerebroAnalyzer {
      */
     calculateMetrics(keywords) {
         return keywords.map(kw => {
-            // ── Search Volume — review-adjusted, same as Magnet Analyzer ──
-            // Re-compute using best available data (avg_reviews may be higher from a later pass)
-            const searchVolume = this.estimateSearchVolume(
-                kw.competing_products,
-                kw.avg_reviews || 0
-            ) || kw.search_volume || 0;
+            // ── Search Volume — Use SerpV2 calculation from Phase 1 ──
+            // Priority 1: SerpV2 estimate from Phase 1 (position way like Reverse ASIN)
+            // Priority 2: Fallback Magnet Analyzer estimate
+            let searchVolume = kw.search_volume;
+            
+            // If the SerpV2 algorithm fell back to 100, we can use the Magnet estimate to be safe
+            if (!searchVolume || searchVolume === 100) {
+                searchVolume = this.estimateSearchVolume(kw.competing_products, kw.avg_reviews || 0) || 100;
+            }
 
             // Cerebro IQ Score = (Volume / Competing Products) × 10
             const iqScore = kw.competing_products > 0
@@ -763,22 +1106,25 @@ class CerebroAnalyzer {
             // Priority 3: volume × 9.5% estimate (last resort)
             let totalKeywordSales = 0;
             if (kw.total_page_sales > 0) {
-                // Real data from Amazon's "bought in past month" label
+                // Real data + BSR estimates from scraping pass
                 totalKeywordSales = kw.total_page_sales;
             } else {
-                // BSR-bracket estimate (mirrors market analysis feature)
-                // We don't have per-product BSR from search results, so we
-                // use average monthly sales for a mid-range BSR based on volume.
-                // Formula: if vol > 5000 → BSR ~1000, if vol > 1000 → BSR ~5000, etc.
-                let estimatedBSR;
-                if (searchVolume > 5000)      estimatedBSR = 500;
-                else if (searchVolume > 2000) estimatedBSR = 2000;
-                else if (searchVolume > 1000) estimatedBSR = 5000;
-                else if (searchVolume > 500)  estimatedBSR = 10000;
-                else if (searchVolume > 100)  estimatedBSR = 20000;
-                else                          estimatedBSR = 50000;
+                // Fallback BSR-bracket estimate ...
+                let baseBSR = 50000;
+                if (searchVolume > 5000)      baseBSR = 500;
+                else if (searchVolume > 2000) baseBSR = 2000;
+                else if (searchVolume > 1000) baseBSR = 5000;
+                else if (searchVolume > 500)  baseBSR = 10000;
+                else if (searchVolume > 100)  baseBSR = 20000;
 
-                totalKeywordSales = this.estimateSalesFromBSR(estimatedBSR);
+                let sumSales = 0;
+                for (let i = 0; i < 15; i++) {
+                    const estimatedBSR = Math.min(100000, Math.round(baseBSR * Math.sqrt(i + 1)));
+                    let posSales = this.estimateSalesFromBSR(estimatedBSR);
+                    posSales = Math.min(posSales, 49); // Cap at 49 to align with Market Analysis no-badge rule
+                    sumSales += posSales;
+                }
+                totalKeywordSales = sumSales;
             }
 
             // Use real scraped click share; 0 if not found (no static fallback)
@@ -808,8 +1154,113 @@ class CerebroAnalyzer {
     }
 
     /**
-     * Estimate search volume from competing products + avg reviews.
-     * Delegates to MagnetAnalyzer.estimateSearchVolume() — single source of truth.
+     * Get cached HTML from sessionStorage (expires after 1 hour)
+     */
+    getCachedHtml(keyword) {
+        try {
+            const str = sessionStorage.getItem(`cerebro_html_${keyword}`);
+            if (!str) return null;
+            const data = JSON.parse(str);
+            // Expire after 1 hour
+            if (Date.now() - data.timestamp > 3600000) {
+                sessionStorage.removeItem(`cerebro_html_${keyword}`);
+                return null;
+            }
+            return data.html;
+        } catch(e) { 
+            return null; 
+        }
+    }
+
+    /**
+     * Save HTML to sessionStorage for fast debugging and development
+     */
+    setCachedHtml(keyword, html) {
+        try {
+            const data = JSON.stringify({
+                timestamp: Date.now(),
+                html: html
+            });
+            sessionStorage.setItem(`cerebro_html_${keyword}`, data);
+        } catch(e) {
+            // Quota exceeded (usually 5MB limit). Free space by clearing all previous cerebro caches.
+            console.warn('[Cerebro] Session cache quota exceeded. Freeing space for new keywords...');
+            const keysToRemove = [];
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                if (key && key.startsWith('cerebro_html_')) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(k => sessionStorage.removeItem(k));
+            
+            // Try one more time
+            try {
+                const data = JSON.stringify({ timestamp: Date.now(), html: html });
+                sessionStorage.setItem(`cerebro_html_${keyword}`, data);
+            } catch(e2) {
+                console.warn('[Cerebro] HTML too large to cache even after clearing.');
+            }
+        }
+    }
+
+    /**
+     * Calculates search volume using the SerpV2 algorithm, exactly like Reverse ASIN and Backend.
+     * It uses position-weighted click attribution to estimate total market volume.
+     */
+    calculateSearchVolumeSerpV2(products) {
+        if (!products || products.length === 0) return 100;
+
+        let organic = [];
+        let sponsored = [];
+        for (const p of products) {
+            if (p.is_sponsored || p.sponsored) sponsored.push(p);
+            else organic.push(p);
+        }
+        
+        // Reorder: organic first, sponsored at end
+        const reordered = [...organic, ...sponsored];
+
+        let weightedSales = 0;
+        let validProducts = 0;
+
+        for (let i = 0; i < reordered.length; i++) {
+            const product = reordered[i];
+            const position = i + 1;
+
+            let monthlySales = product.sales || product.monthly_sales || 0;
+
+            if (!monthlySales && product.bsr && product.bsr > 0) {
+                monthlySales = this.estimateSalesFromBSR(product.bsr);
+            }
+
+            if (!monthlySales || monthlySales <= 0) continue;
+
+            let positionWeight = 0.001;
+            if (position <= 5) positionWeight = 0.15;
+            else if (position <= 10) positionWeight = 0.03;
+            else if (position <= 20) positionWeight = 0.005;
+            else if (position <= 40) positionWeight = 0.002;
+
+            let typeWeight = (product.is_sponsored || product.sponsored) ? 0.5 : 1.0;
+
+            weightedSales += monthlySales * positionWeight * typeWeight;
+            validProducts++;
+        }
+
+        if (validProducts === 0) {
+            // Fallback if NO products have sales badges and BSR is off
+            return 100;
+        }
+
+        const clickShare = 0.95;
+        const avgCVR = 0.08;
+
+        return Math.round(weightedSales / avgCVR / clickShare);
+    }
+
+    /**
+     * Magnet Analyzer fallback search volume estimate
      */
     estimateSearchVolume(competingProducts, avgReviews = 0) {
         // Reuse MagnetAnalyzer's formula so both tools stay in sync
@@ -904,10 +1355,6 @@ class CerebroAnalyzer {
             if (filters.volume_min && kw.search_volume < filters.volume_min) return false;
             if (filters.volume_max && kw.search_volume > filters.volume_max) return false;
 
-            // IQ Score filter
-            if (filters.iq_min && kw.cerebro_iq_score < filters.iq_min) return false;
-            if (filters.iq_max && kw.cerebro_iq_score > filters.iq_max) return false;
-
             // Word count filter
             if (filters.words_min && kw.word_count < filters.words_min) return false;
             if (filters.words_max && kw.word_count > filters.words_max) return false;
@@ -957,7 +1404,7 @@ class CerebroAnalyzer {
     applyQuickFilter(keywords, filterName) {
         const presets = {
             'top_keywords': { volume_min: 1000, rank_max: 20 },
-            'opportunity': { iq_min: 3, title_density_max: 5 },
+            'opportunity': { volume_min: 500, title_density_max: 5 },
             'low_competition': { competing_max: 10000, volume_min: 500 },
             'long_tail': { words_min: 4, volume_min: 100 },
             'not_ranking': { rank_min: 999 } // Keywords where we don't rank
@@ -998,38 +1445,28 @@ class CerebroAnalyzer {
     exportToCSV(keywords) {
         const headers = [
             'Keyword',
-            'Searches (Monthly Est.)',
-            'IQ Score',
+            'Searches',
             'Top 3 Sales Share',
-            'Total Keyword Sales',
-            'Title Density',
-            'Competing Products',
-            'Sponsored Products',
-            'Word Count',
-            'Keyword Sales',
-            'ASINs Ranking',
-            'Avg Rank',
-            'Min Rank',
-            'Max Rank',
+            'Sales',
+            'Density',
+            'KD',
+            'Sponsored',
+            'Words',
+            'Ranking',
             ...this.asins.map(a => `Rank: ${a}`)
         ];
 
         const rows = keywords.map(kw => [
             kw.keyword,
-            kw.search_volume,
-            kw.cerebro_iq_score,
-            kw.total_click_share != null ? `${kw.total_click_share.toFixed(1)}%` : '0%',
+            kw.search_volume || 0,
+            kw.total_click_share != null ? `${kw.total_click_share.toFixed(0)}%` : '0%',
             kw.total_keyword_sales || 0,
             kw.title_density || 0,
-            kw.competing_products || 0,
+            kw.difficulty_score ?? 0,
             kw.sponsored_count || 0,
-            kw.word_count,
-            kw.keyword_sales,
-            kw.asins_ranking,
-            kw.avg_organic_rank || '',
-            kw.min_organic_rank || '',
-            kw.max_organic_rank || '',
-            ...this.asins.map(a => kw.organic_ranks[a] || '')
+            kw.word_count || 0,
+            `${kw.asins_ranking || 0}/${this.asins.length}`,
+            ...this.asins.map(a => kw.organic_ranks?.[a] ? `#${kw.organic_ranks[a]}` : '-')
         ]);
 
         const csv = [headers, ...rows]

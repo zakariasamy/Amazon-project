@@ -29,7 +29,7 @@ class IntelligenceEngine {
             revenue = this.estimateRevenue(sales, price);
             fees = this.calculateFees(price, productData);
             profit = this.calculateProfit(revenue, fees, price);
-            competition = this.analyzeCompetition(reviewCount, 50000); // Assume mid-range BSR
+            competition = this.analyzeCompetition(reviewCount, 50000, productData.sellerCount || 1); // Assume mid-range BSR
             opportunity = this.calculateOpportunityScore(profit, competition, sales);
         } else {
             // Normal calculation with BSR
@@ -37,7 +37,7 @@ class IntelligenceEngine {
             revenue = this.estimateRevenue(sales, price);
             fees = this.calculateFees(price, productData);
             profit = this.calculateProfit(revenue, fees, price);
-            competition = this.analyzeCompetition(reviewCount, bsr);
+            competition = this.analyzeCompetition(reviewCount, bsr, productData.sellerCount || 1);
             opportunity = this.calculateOpportunityScore(profit, competition, sales);
         }
 
@@ -286,7 +286,7 @@ class IntelligenceEngine {
     /**
      * Analyze competition
      */
-    analyzeCompetition(reviewCount, bsr) {
+    analyzeCompetition(reviewCount, bsr, sellerCount = 1) {
         const levels = this.constants.getCompetitionLevels();
 
         let level = 'very_low';
@@ -309,17 +309,31 @@ class IntelligenceEngine {
             }
         }
 
+        // Increase competition score for high seller count (buybox competition)
+        if (sellerCount > 8) {
+            score = Math.min(4, score + 2); // Very high buybox competition
+        } else if (sellerCount > 3) {
+            score = Math.min(4, score + 1); // Moderate buybox competition
+        }
+
+        // Update level name based on updated score
+        if (score === 4) level = 'very_high';
+        else if (score === 3) level = 'high';
+        else if (score === 2) level = 'medium';
+        else level = 'low';
+
         // Estimate review velocity (reviews per month)
         const reviewVelocity = Math.round(reviewCount / 12); // Assume 1 year average
 
-        // Market saturation check
-        const saturated = reviewCount > 500 && bsr > 10000;
+        // Market saturation check - either high reviews & bad BSR, or extremely high buybox seller competition
+        const saturated = (reviewCount > 500 && bsr > 10000) || sellerCount > 10;
 
         return {
             level,
             score,
             reviewVelocity,
-            saturated
+            saturated,
+            sellerCount
         };
     }
 
@@ -435,6 +449,19 @@ class IntelligenceEngine {
             insights.push({
                 type: 'success',
                 message: `✅ Low competition. Good opportunity to establish presence`
+            });
+        }
+
+        // Buybox Seller count insights (1 seller is not flagged as Private Label to respect new products)
+        if (competition.sellerCount > 8) {
+            insights.push({
+                type: 'danger',
+                message: `⚠️ Extremely high Buybox competition with ${competition.sellerCount} sellers. Intense price undercutting possible.`
+            });
+        } else if (competition.sellerCount > 3) {
+            insights.push({
+                type: 'warning',
+                message: `🏪 Moderate seller activity (${competition.sellerCount} sellers). Typical of wholesale or popular retail arbitrage.`
             });
         }
 

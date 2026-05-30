@@ -8,6 +8,9 @@ class CerebroUI {
         this.panel = null;
         this.selectionBar = null;
         this.isAnalyzing = false;
+        this.testModeEnabled = false;
+        this.testModeProductUrl = '';
+        this.testAsin = null;
     }
 
     /**
@@ -23,6 +26,35 @@ class CerebroUI {
                       document.documentElement.classList.contains('a-rtl');
         const hasArLang = document.documentElement.lang && document.documentElement.lang.startsWith('ar');
         return !!(hasArUrl || isRtl || hasArLang);
+    }
+
+    parseBooleanSetting(value, defaultValue = false) {
+        if (value === undefined || value === null) return defaultValue;
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'number') return value !== 0;
+
+        const s = String(value).trim().toLowerCase();
+        if (s === '1' || s === 'true' || s === 'yes' || s === 'on') return true;
+        if (s === '0' || s === 'false' || s === 'no' || s === 'off' || s === '') return false;
+        return defaultValue;
+    }
+
+    getBackendBaseUrl() {
+        try {
+            if (typeof window !== 'undefined') {
+                if (window.ApiClient && window.ApiClient.baseUrl) return window.ApiClient.baseUrl;
+                if (window.API_CONFIG && window.API_CONFIG.baseUrl) return window.API_CONFIG.baseUrl;
+            }
+        } catch (e) {
+            // ignore
+        }
+        return 'http://127.0.0.1:8000'; // fallback
+    }
+
+    parseAsinFromUrl(url) {
+        if (!url) return null;
+        const match = url.match(/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
+        return match ? match[1].toUpperCase() : null;
     }
 
     /**
@@ -62,7 +94,7 @@ class CerebroUI {
         }
 
         const translations = {
-            'keyword analyzer pro': 'محلل الكلمات المفتاحية برو',
+            'competitor keyword analyzer': 'محلل الكلمات المفتاحية للمنافسين',
             'select products to analyze': 'اختر منتجات لتحليلها',
             'clear all': 'مسح الكل',
             'analyze keywords': 'تحليل الكلمات المفتاحية',
@@ -86,11 +118,10 @@ class CerebroUI {
             'clear': 'مسح',
             'keyword': 'الكلمة المفتاحية',
             'volume ↕': 'حجم البحث ↕',
-            'iq ↕': 'درجة الذكاء ↕',
             'top 3 sales share ↕': 'نسبة مبيعات أعلى 3 ↕',
             'sales ↕': 'المبيعات ↕',
-            'density ↕': 'الكثافة ↕',
-            'competing ↕': 'المنافسة ↕',
+            'ad density ↕': 'كثافة الإعلانات ↕',
+            'difficulty ↕': 'الصعوبة ↕',
             'sponsored ↕': 'الممولة ↕',
             'words': 'الكلمات',
             'ranking': 'التصنيف',
@@ -146,11 +177,68 @@ class CerebroUI {
      * Initialize Cerebro UI on search page
      * Injects checkboxes on product rows and adds floating selection bar
      */
-    initOnSearchPage() {
+    async initOnSearchPage() {
         console.log('[Cerebro] Initializing on search page');
-        this.injectProductCheckboxes();
+        
+        // 1. Create selection bar first so it's ready
         this.createSelectionBar();
+        
+        // 2. Observe changes so dynamic cards are handled
         this.observeProductChanges();
+        
+        // 3. Inject checkboxes immediately (without waiting for settings, to ensure fast UI)
+        this.injectProductCheckboxes();
+        
+        // 4. Fetch settings asynchronously to check for test mode and auto-select
+        try {
+            const baseUrl = this.getBackendBaseUrl();
+            const response = await fetch(`${baseUrl}/api/settings`);
+            if (response.ok) {
+                const configData = await response.json();
+                const settings = configData.settings || {};
+                
+                this.testModeEnabled = this.parseBooleanSetting(settings.test_mode_enabled, false);
+                this.testModeProductUrl = settings.test_mode_product_url || '';
+                
+                if (this.testModeEnabled && this.testModeProductUrl) {
+                    this.testAsin = this.parseAsinFromUrl(this.testModeProductUrl);
+                    console.log(`[Cerebro] Test Mode Active: Auto-selecting test ASIN ${this.testAsin}`);
+                    
+                    // Trigger auto-selection on any already injected checkbox
+                    this.autoSelectTestProduct();
+                }
+            }
+        } catch (e) {
+            console.warn('[Cerebro] Failed to fetch settings for test mode:', e);
+        }
+    }
+
+    /**
+     * Auto-select the test product checkbox if it exists on the page
+     */
+    autoSelectTestProduct() {
+        if (!this.testModeEnabled || !this.testAsin) return;
+        
+        const checkbox = document.querySelector(`.cerebro-asin-checkbox[data-asin="${this.testAsin}"]`);
+        if (checkbox && !checkbox.checked) {
+            checkbox.checked = true;
+            this.selectedAsins.add(this.testAsin);
+            
+            const card = checkbox.closest('[data-asin]');
+            if (card) {
+                card.style.outline = '2px solid #6366f1';
+                card.style.outlineOffset = '-2px';
+            }
+            
+            const label = checkbox.parentElement?.querySelector('.cerebro-position-label');
+            if (label) {
+                label.style.display = 'inline-block';
+            }
+            
+            this.updateSelectionNumbers();
+            this.updateSelectionBar();
+            console.log(`[Cerebro] Successfully auto-selected test product: ${this.testAsin}`);
+        }
     }
 
     /**
@@ -240,6 +328,20 @@ class CerebroUI {
             }
 
             card.appendChild(checkboxContainer);
+
+            // Auto check if this is the test ASIN in test mode
+            if (this.testModeEnabled && this.testAsin && asin === this.testAsin) {
+                checkbox.checked = true;
+                this.selectedAsins.add(asin);
+                label.style.display = 'inline-block';
+                card.style.outline = '2px solid #6366f1';
+                card.style.outlineOffset = '-2px';
+                
+                setTimeout(() => {
+                    this.updateSelectionNumbers();
+                    this.updateSelectionBar();
+                }, 100);
+            }
         });
 
         console.log(`[Cerebro] Injected checkboxes on ${productCards.length} products`);
@@ -292,7 +394,7 @@ class CerebroUI {
             <div style="display: flex; align-items: center; gap: 12px;">
                 <span style="font-size: 28px;">🧠</span>
                 <div>
-                    <div style="font-weight: 700; color: #fff; font-size: 15px;">Keyword Analyzer Pro</div>
+                    <div style="font-weight: 700; color: #fff; font-size: 15px;">Competitor Keyword Analyzer</div>
                     <div id="cerebro-selection-count" style="color: #94a3b8; font-size: 12px;">Select products to analyze</div>
                 </div>
             </div>
@@ -533,7 +635,7 @@ class CerebroUI {
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <span style="font-size: 28px;">🧠</span>
                     <div>
-                        <div style="font-weight: 700; color: #fff; font-size: 18px;">Keyword Analyzer Pro</div>
+                        <div style="font-weight: 700; color: #fff; font-size: 18px;">Competitor Keyword Analyzer</div>
                         <div id="cerebro-status" style="color: #94a3b8; font-size: 12px;">Initializing...</div>
                     </div>
                 </div>
@@ -711,7 +813,7 @@ class CerebroUI {
                 background: #1e293b;
                 border-bottom: 1px solid #374151;
                 display: grid;
-                grid-template-columns: repeat(5, 1fr);
+                grid-template-columns: repeat(4, 1fr);
                 gap: 16px;
             ">
                 <div style="text-align: center;">
@@ -722,10 +824,7 @@ class CerebroUI {
                     <div style="color: #9ca3af; font-size: 10px; text-transform: uppercase; font-weight: 600;">Keywords Found</div>
                     <div style="color: #10b981; font-size: 24px; font-weight: 700;">${keywords.length}</div>
                 </div>
-                <div style="text-align: center;">
-                    <div style="color: #9ca3af; font-size: 10px; text-transform: uppercase; font-weight: 600;">Avg IQ Score</div>
-                    <div style="color: #6366f1; font-size: 24px; font-weight: 700;">${this.calcAvg(keywords, 'cerebro_iq_score')}</div>
-                </div>
+
                 <div style="text-align: center;">
                     <div style="color: #9ca3af; font-size: 10px; text-transform: uppercase; font-weight: 600;">Avg Volume</div>
                     <div style="color: #0ea5e9; font-size: 24px; font-weight: 700;">${this.formatNumber(this.calcAvg(keywords, 'search_volume'))}</div>
@@ -801,13 +900,7 @@ class CerebroUI {
                             background: #0f172a; color: #e5e7eb; font-size: 11px;">
                     </div>
                     
-                    <!-- IQ Score -->
-                    <div style="display: flex; align-items: center; gap: 3px;">
-                        <span style="color: #9ca3af;">IQ≥</span>
-                        <input type="number" id="cerebro-filter-iq-min" placeholder="0" step="0.5" style="
-                            width: 45px; padding: 4px 5px; border-radius: 4px; border: 1px solid #374151;
-                            background: #0f172a; color: #e5e7eb; font-size: 11px;">
-                    </div>
+
                     
                     <!-- Ranking -->
                     <div style="display: flex; align-items: center; gap: 3px;">
@@ -846,11 +939,10 @@ class CerebroUI {
                         <tr style="background: #1e293b; color: #9ca3af; text-transform: uppercase; font-size: 10px;">
                             <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #374151;">Keyword</th>
                             <th style="padding: 12px 8px; text-align: right; border-bottom: 2px solid #374151; cursor: pointer;" data-sort="search_volume" title="Estimated monthly searches for this keyword">Searches ↕</th>
-                            <th style="padding: 12px 8px; text-align: right; border-bottom: 2px solid #374151; cursor: pointer;" data-sort="cerebro_iq_score">IQ ↕</th>
                             <th style="padding: 12px 8px; text-align: right; border-bottom: 2px solid #374151; cursor: pointer;" data-sort="total_click_share">Top 3 Sales Share ↕</th>
                             <th style="padding: 12px 8px; text-align: right; border-bottom: 2px solid #374151; cursor: pointer;" data-sort="total_keyword_sales" title="Total monthly sales across all products for this keyword">Sales ↕</th>
-                            <th style="padding: 12px 8px; text-align: right; border-bottom: 2px solid #374151; cursor: pointer;" data-sort="title_density">Density ↕</th>
-                            <th style="padding: 12px 8px; text-align: right; border-bottom: 2px solid #374151; cursor: pointer;" data-sort="competing_products">Competing ↕</th>
+                            <th style="padding: 12px 8px; text-align: right; border-bottom: 2px solid #374151; cursor: pointer;" data-sort="sponsored_count">AD Density ↕</th>
+                            <th style="padding: 12px 8px; text-align: right; border-bottom: 2px solid #374151; cursor: pointer;" data-sort="difficulty_score">Difficulty ↕</th>
                             <th style="padding: 12px 8px; text-align: right; border-bottom: 2px solid #374151; cursor: pointer;" data-sort="sponsored_count">Sponsored ↕</th>
                             <th style="padding: 12px 8px; text-align: right; border-bottom: 2px solid #374151;">Words</th>
                             <th style="padding: 12px 8px; text-align: center; border-bottom: 2px solid #374151;">Ranking</th>
@@ -907,7 +999,7 @@ class CerebroUI {
     clearAdvancedFilters() {
         const ids = ['cerebro-filter-vol-min', 'cerebro-filter-vol-max',
             'cerebro-filter-words-min', 'cerebro-filter-words-max',
-            'cerebro-filter-iq-min', 'cerebro-filter-search'];
+            'cerebro-filter-search'];
         ids.forEach(id => {
             const el = this.panel?.querySelector(`#${id}`);
             if (el) el.value = '';
@@ -926,7 +1018,6 @@ class CerebroUI {
         const volMax = parseFloat(this.panel.querySelector('#cerebro-filter-vol-max')?.value) || Infinity;
         const wordsMin = parseInt(this.panel.querySelector('#cerebro-filter-words-min')?.value) || 0;
         const wordsMax = parseInt(this.panel.querySelector('#cerebro-filter-words-max')?.value) || Infinity;
-        const iqMin = parseFloat(this.panel.querySelector('#cerebro-filter-iq-min')?.value) || 0;
         const ranking = this.panel.querySelector('#cerebro-filter-ranking')?.value || 'all';
         const search = (this.panel.querySelector('#cerebro-filter-search')?.value || '').toLowerCase().trim();
 
@@ -938,8 +1029,6 @@ class CerebroUI {
             if (kw.search_volume < volMin || kw.search_volume > volMax) return false;
             // Word count filter
             if (kw.word_count < wordsMin || kw.word_count > wordsMax) return false;
-            // IQ Score filter
-            if ((kw.cerebro_iq_score || 0) < iqMin) return false;
             // Ranking filter
             if (ranking === 'ranked' && kw.asins_ranking === 0) return false;
             if (ranking === 'all-ranking' && kw.asins_ranking < totalAsins) return false;
@@ -980,19 +1069,20 @@ class CerebroUI {
 
             const clickShareText = kw.total_click_share ? `${kw.total_click_share.toFixed(0)}%` : '0%';
             const salesText = this.formatNumber(kw.total_keyword_sales || 0);
-            const densityText = kw.title_density || 0;
-            const competingText = this.formatNumber(kw.competing_products || 0);
+            const totalPageProducts = kw.total_page_products > 0 ? kw.total_page_products : 48;
+            const adDensityPct = Math.round(((kw.sponsored_count || 0) / totalPageProducts) * 100);
+            const densityText = adDensityPct + '%';
+            const difficultyHtml = this.formatDifficulty(kw.difficulty_score);
             const sponsoredText = kw.sponsored_count || 0;
 
             return `
                 <tr style="background: ${idx % 2 === 0 ? '#0f172a' : '#1e293b'}; border-bottom: 1px solid #374151;">
                     <td style="padding: 10px 8px; color: #fff; font-weight: 500;">${kw.keyword}</td>
                     <td style="padding: 10px 8px; text-align: right; color: #60a5fa; font-weight: 600;" title="Estimated monthly searches (same formula as Magnet & Market Analysis)">${this.formatNumber(kw.search_volume)}</td>
-                    <td style="padding: 10px 8px; text-align: right; color: ${iqColor}; font-weight: 700;">${kw.cerebro_iq_score?.toFixed(1) || '0'}</td>
                     <td style="padding: 10px 8px; text-align: right; color: #10b981; font-weight: 600;">${clickShareText}</td>
                     <td style="padding: 10px 8px; text-align: right; color: #0ea5e9; font-weight: 600;">${salesText}</td>
                     <td style="padding: 10px 8px; text-align: right; color: #a855f7;">${densityText}</td>
-                    <td style="padding: 10px 8px; text-align: right; color: #f43f5e;">${competingText}</td>
+                    <td style="padding: 10px 8px; text-align: right;">${difficultyHtml}</td>
                     <td style="padding: 10px 8px; text-align: right; color: #eab308;">${sponsoredText}</td>
                     <td style="padding: 10px 8px; text-align: right; color: #9ca3af;">${kw.word_count}</td>
                     <td style="padding: 10px 8px; text-align: center;">
@@ -1192,6 +1282,20 @@ class CerebroUI {
         if (!arr.length) return 0;
         const sum = arr.reduce((acc, item) => acc + (item[key] || 0), 0);
         return Math.round(sum / arr.length * 10) / 10;
+    }
+
+    /**
+     * Format difficulty score with color coding (same logic as Market Analysis)
+     * Green <30, Yellow 30-50, Orange 50-70, Red >=70
+     */
+    formatDifficulty(score) {
+        if (score == null || score === 0) return '<span style="color: #6b7280;">—</span>';
+        let color = '#4ade80'; // green
+        let label = 'Easy';
+        if (score >= 70) { color = '#f87171'; label = 'Hard'; }
+        else if (score >= 50) { color = '#fb923c'; label = 'Med'; }
+        else if (score >= 30) { color = '#facc15'; label = 'Fair'; }
+        return `<span style="color: ${color}; font-weight: 700;">${score}</span><span style="color: #6b7280; font-size: 10px; margin-left: 2px;">${label}</span>`;
     }
 
     /**

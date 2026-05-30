@@ -1167,6 +1167,10 @@ async function analyzeSearchPage() {
     };
 
     try {
+        // Use SerpParser to extract data
+        const parser = new SerpParser(document);
+        let keyword = parser.extractKeyword();
+
         // Fetch configuration from backend (same settings as Reverse ASIN)
         updateLoadingMessage('Fetching configuration...');
         let fetchLimit = 15; // Safe default
@@ -1184,15 +1188,16 @@ async function analyzeSearchPage() {
                 batchSize = settings.search_page_bsr_parallel_requests || 5;
                 batchDelay = settings.search_page_bsr_delay_ms || 300;
 
+                if (settings.test_mode_enabled === true || settings.test_mode_enabled === '1') {
+                    keyword = settings.test_mode_keyword || 'portal scale body';
+                    console.log(`[Search Page] Test Mode Active: FORCE overriding search keyword with "${keyword}"`);
+                }
+
                 console.log('[Search Page] BSR enrichment settings:', { fetchLimit, batchSize, batchDelay });
             }
         } catch (e) {
             console.warn('Failed to fetch settings, using defaults');
         }
-
-        // Use SerpParser to extract data
-        const parser = new SerpParser(document);
-        const keyword = parser.extractKeyword();
         let products = parser.extractProducts();
 
         // Apply backend fetch limit

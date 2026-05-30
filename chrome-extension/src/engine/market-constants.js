@@ -1,7 +1,7 @@
 // Market Constants for Amazon Analytics
 class MarketConstants {
     constructor(marketplace = 'amazon.com') {
-        this.marketplace = marketplace;
+        this.marketplace = marketplace.replace('www.', '');
     }
 
     /**

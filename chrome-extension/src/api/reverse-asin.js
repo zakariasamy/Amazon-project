@@ -3,12 +3,53 @@
 
 class ReverseAsin {
     constructor(marketplace = 'amazon.com') {
-        this.marketplace = marketplace;
-        this.tld = this.getTLD(marketplace);
+        this.marketplace = this.normalizeMarketplace(marketplace);
+        this.tld = this.getTLD(this.marketplace);
         this.discoveredKeywords = new Map();
         this.isRunning = false;
         this.onProgress = null; // Callback for progress updates
         this.productsFetchLimit = 20; // Default, can be overridden by backend settings
+        // Backend URL resolution (avoid hardcoded URLs drifting across modules)
+        this.backendBaseUrlFallback = 'http://127.0.0.1:8000';
+    }
+
+    parseBooleanSetting(value, defaultValue = false) {
+        if (value === undefined || value === null) return defaultValue;
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'number') return value !== 0;
+
+        const s = String(value).trim().toLowerCase();
+        if (s === '1' || s === 'true' || s === 'yes' || s === 'on') return true;
+        if (s === '0' || s === 'false' || s === 'no' || s === 'off' || s === '') return false;
+        return defaultValue;
+    }
+
+    getBackendBaseUrl() {
+        try {
+            if (typeof window !== 'undefined') {
+                if (window.ApiClient && window.ApiClient.baseUrl) return window.ApiClient.baseUrl;
+                if (window.API_CONFIG && window.API_CONFIG.baseUrl) return window.API_CONFIG.baseUrl;
+            }
+        } catch (e) {
+            // ignore
+        }
+        return this.backendBaseUrlFallback;
+    }
+
+    normalizeMarketplace(marketplace) {
+        const raw = (marketplace || '').toString().trim().toLowerCase();
+        if (!raw) return 'amazon.com';
+
+        const withoutProto = raw.replace(/^https?:\/\//, '');
+        const hostname = withoutProto.split('/')[0] || withoutProto;
+        const cleaned = hostname.replace(/^(www\.|smile\.|m\.)/i, '');
+
+        if (cleaned.endsWith('amazon.co.uk')) return 'amazon.co.uk';
+        if (cleaned.endsWith('amazon.com')) return 'amazon.com';
+        if (cleaned.endsWith('amazon.eg')) return 'amazon.eg';
+        if (cleaned.endsWith('amazon.de')) return 'amazon.de';
+
+        return cleaned;
     }
 
     getTLD(marketplace) {
@@ -28,6 +69,19 @@ class ReverseAsin {
      * @param {Document} productPageDoc - DOM of the product page (optional, will fetch if not provided)
      * @param {Function} onProgress - Progress callback (stage, current, total, message)
      */
+    parseAsinFromUrl(url) {
+        if (!url) return null;
+        const match = url.match(/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
+        return match ? match[1].toUpperCase() : null;
+    }
+
+    /**
+     * Main entry point: Discover keywords for an ASIN
+     * Enhanced with carousel-based keyword extraction
+     * @param {string} asin - Target ASIN
+     * @param {Document} productPageDoc - DOM of the product page (optional, will fetch if not provided)
+     * @param {Function} onProgress - Progress callback (stage, current, total, message)
+     */
     async discoverKeywords(asin, productPageDoc = null, onProgress = null) {
         if (this.isRunning) {
             return { error: 'Discovery already in progress' };
@@ -38,20 +92,28 @@ class ReverseAsin {
         this.discoveredKeywords.clear();
 
         try {
-            // Fetch all configuration from backend (same settings as Search Page)
+            // Fetch all configuration from backend first (same settings as Search Page)
             try {
-                const configResponse = await fetch('http://127.0.0.1:8000/api/settings');
+                const baseUrl = this.getBackendBaseUrl();
+                console.log('[Reverse ASIN] Using backend baseUrl:', baseUrl);
+                const configResponse = await fetch(`${baseUrl}/api/settings`);
                 if (configResponse.ok) {
                     const configData = await configResponse.json();
                     const settings = configData.settings || {};
 
-                    // Reverse ASIN specific settings (different from Search Page)
-                    this.bsrProductsLimit = settings.reverse_asin_products_limit || 10;
-                    this.bsrParallelRequests = settings.reverse_asin_bsr_parallel_requests || 3;
-                    this.bsrDelayMs = settings.reverse_asin_bsr_delay_ms || 500;
-                    this.maxKeywords = settings.reverse_asin_keywords_limit || 50;
-                    this.searchDelayMs = settings.reverse_asin_search_delay_ms || 1500;
-                    this.backendBatchSize = settings.reverse_asin_backend_batch_size || 5;
+                    // Reverse ASIN specific settings (aligned with Competitor Keyword Analyzer limit in Admin Settings)
+                    this.bsrProductsLimit = (settings.reverse_asin_products_limit !== undefined && settings.reverse_asin_products_limit !== '')
+                        ? parseInt(settings.reverse_asin_products_limit)
+                        : (parseInt(settings.cerebro_bsr_products_limit) || 20);
+                    this.bsrParallelRequests = parseInt(settings.reverse_asin_bsr_parallel_requests) || 3;
+                    this.bsrDelayMs = parseInt(settings.reverse_asin_bsr_delay_ms) || 500;
+                    this.maxKeywords = parseInt(settings.reverse_asin_keywords_limit) || 50;
+                    this.searchDelayMs = parseInt(settings.reverse_asin_search_delay_ms) || 1500;
+                    this.backendBatchSize = parseInt(settings.reverse_asin_backend_batch_size) || 5;
+                    
+                    this.testModeEnabled = this.parseBooleanSetting(settings.test_mode_enabled, false);
+                    this.testModeKeyword = settings.test_mode_keyword || 'portal scale body';
+                    this.testModeProductUrl = settings.test_mode_product_url || '';
 
                     console.log('[Reverse ASIN] Settings loaded:', {
                         bsrProductsLimit: this.bsrProductsLimit,
@@ -59,11 +121,88 @@ class ReverseAsin {
                         bsrDelayMs: this.bsrDelayMs,
                         maxKeywords: this.maxKeywords,
                         searchDelayMs: this.searchDelayMs,
-                        backendBatchSize: this.backendBatchSize
+                        backendBatchSize: this.backendBatchSize,
+                        testModeEnabled: this.testModeEnabled,
+                        testModeKeyword: this.testModeKeyword
                     });
                 }
             } catch (e) {
                 console.warn('Failed to fetch settings, using defaults');
+                this.bsrProductsLimit = 20;
+                this.bsrParallelRequests = 3;
+                this.bsrDelayMs = 500;
+                this.maxKeywords = 50;
+                this.searchDelayMs = 1500;
+                this.backendBatchSize = 5;
+                this.testModeEnabled = false;
+                this.testModeKeyword = 'portal scale body';
+                this.testModeProductUrl = '';
+            }
+
+            // Override ASIN in Test Mode
+            if (this.testModeEnabled && this.testModeProductUrl) {
+                const testAsin = this.parseAsinFromUrl(this.testModeProductUrl);
+                if (testAsin) {
+                    console.log(`[Reverse ASIN] Test Mode Active: overriding target ASIN ${asin} with test ASIN ${testAsin}`);
+                    asin = testAsin;
+                }
+            }
+
+            // Check for cached results for today first (skip in Test Mode)
+            if (!this.testModeEnabled) {
+                this.updateProgress('cache_check', 0, 1, 'Checking for cached results...');
+                try {
+                    const baseUrl = this.getBackendBaseUrl();
+                    const historyResponse = await fetch(`${baseUrl}/api/reverse-asin/${asin}/history?limit=1&marketplace=${this.marketplace}`);
+                    if (historyResponse.ok) {
+                        const historyData = await historyResponse.json();
+                        if (historyData.success && historyData.history && historyData.history.length > 0) {
+                            const lastResult = historyData.history[0];
+                            const createdDate = new Date(lastResult.created_at);
+                            const today = new Date();
+                            
+                            // Check if it's from today (same calendar day)
+                            if (createdDate.toDateString() === today.toDateString()) {
+                                const cachedKeywords = lastResult.keywords || [];
+                                const foundKeywords = cachedKeywords.filter(k => k && k.found);
+                                const looksLikeTestModeCache =
+                                    (String(lastResult.source || '').toLowerCase().includes('test')) ||
+                                    (foundKeywords.length === 1 && (foundKeywords[0].keyword || '').trim().toLowerCase() === (this.testModeKeyword || '').trim().toLowerCase());
+
+                                if (looksLikeTestModeCache) {
+                                    console.log('[Reverse ASIN] Cache looks like Test Mode output; ignoring cache and recomputing.', {
+                                        asin,
+                                        source: lastResult.source,
+                                        keywordsFound: lastResult.keywords_found,
+                                        foundKeywords: foundKeywords.map(k => k.keyword)
+                                    });
+                                } else {
+                                    console.log(`[Reverse ASIN] Reusing cached results from today for ${asin}`);
+                                this.isRunning = false;
+                                this.updateProgress('complete', lastResult.keywords_tested, lastResult.keywords_tested, 'Loaded from cache!');
+
+                                return {
+                                    asin: lastResult.asin,
+                                    productInfo: {
+                                        title: lastResult.title,
+                                        category: lastResult.category
+                                    },
+                                    keywordsTested: lastResult.keywords_tested,
+                                    keywordsFound: lastResult.keywords_found,
+                                    keywords: cachedKeywords.filter(k => k.found),
+                                    allKeywords: cachedKeywords,
+                                    source: lastResult.source || 'cache',
+                                    isCached: true
+                                };
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Failed to check history cache:', e);
+                }
+            } else {
+                console.log('[Reverse ASIN] Test Mode Active: Bypassing history cache!');
             }
 
             // =========================
@@ -212,9 +351,12 @@ class ReverseAsin {
             // =========================
             // Apply keywords limit from settings
             const maxKw = this.maxKeywords || 50;
-            const keywordsToTest = candidateKeywords.slice(0, maxKw);
+            let keywordsToTest = candidateKeywords.slice(0, maxKw);
 
-            if (candidateKeywords.length > maxKw) {
+            if (this.testModeEnabled) {
+                keywordsToTest = [this.testModeKeyword];
+                console.log(`[Reverse ASIN] Test Mode Active: FORCE testing only one keyword: "${keywordsToTest[0]}"`);
+            } else if (candidateKeywords.length > maxKw) {
                 console.log(`[Reverse ASIN] Limiting keywords from ${candidateKeywords.length} to ${maxKw} (setting: reverse_asin_keywords_limit)`);
             }
 
@@ -253,13 +395,15 @@ class ReverseAsin {
                             items: successfulScrapes.map(s => ({
                                 keyword: s.keyword,
                                 marketplace: this.marketplace,
-                                products: s.products
+                                products: s.products,
+                                prefer_cached_volume: !this.testModeEnabled
                             }))
                         };
 
-                        const response = await fetch('http://127.0.0.1:8000/api/search-volume/batch-estimate', {
+                        const baseUrl = this.getBackendBaseUrl();
+                        const response = await fetch(`${baseUrl}/api/search-volume/batch-estimate`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Tool-Source': 'reverse_asin' },
                             body: JSON.stringify(payload)
                         });
 
@@ -390,7 +534,7 @@ class ReverseAsin {
                     if (b.found) return 1;
                     return 0;
                 }),
-                source: productInfo ? 'carousel_analysis' : 'title_fallback'
+                source: `${productInfo ? 'carousel_analysis' : 'title_fallback'}${this.testModeEnabled ? '_test_mode' : ''}`
             };
 
             // Save complete results to backend for history and analysis
@@ -402,8 +546,14 @@ class ReverseAsin {
             this.isRunning = false;
             console.error('Reverse ASIN error:', error);
             return {
-                error: error.message,
-                keywords: Array.from(this.discoveredKeywords.entries()).map(([k, v]) => ({ keyword: k, ...v }))
+                error: error?.message || 'Reverse ASIN error',
+                asin,
+                productInfo: productInfo || null,
+                keywordsTested: 0,
+                keywordsFound: 0,
+                keywords: [],
+                allKeywords: Array.from(this.discoveredKeywords.entries()).map(([k, v]) => ({ keyword: k, ...v })),
+                source: 'error'
             };
         }
     }
@@ -497,7 +647,8 @@ class ReverseAsin {
     async submitRankingToBackend(asin, keyword, ranking) {
         try {
             // Using fetch directly to ensure it works even if ApiClient not loaded
-            await fetch('http://127.0.0.1:8000/api/reverse-asin/ranking', {
+            const baseUrl = this.getBackendBaseUrl();
+            await fetch(`${baseUrl}/api/reverse-asin/ranking`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -526,7 +677,8 @@ class ReverseAsin {
     async saveResultsToBackend(result) {
         try {
             // First save the raw results
-            await fetch('http://127.0.0.1:8000/api/reverse-asin/results', {
+            const baseUrl = this.getBackendBaseUrl();
+            await fetch(`${baseUrl}/api/reverse-asin/results`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -539,7 +691,7 @@ class ReverseAsin {
                     category: result.productInfo?.category || null,
                     keywords_tested: result.keywordsTested || 0,
                     keywords_found: result.keywordsFound || 0,
-                    keywords: result.keywords || [],
+                    keywords: result.allKeywords || result.keywords || [],
                     source: result.source || 'unknown'
                 })
             });
@@ -618,7 +770,7 @@ class ReverseAsin {
                     // Enrich products with BSR (same as Search Page)
                     // This fetches individual product pages to get fresh BSR
                     const enrichOptions = {
-                        limit: this.bsrProductsLimit || 15,
+                        limit: this.bsrProductsLimit || 20,
                         batchSize: this.bsrParallelRequests || 3,
                         batchDelay: this.bsrDelayMs || 500
                     };
@@ -642,8 +794,9 @@ class ReverseAsin {
                 productsList = this.fallbackExtractProducts(doc, normalizedTarget);
             }
 
-            // Limit to top 60 products (but only top 20 have BSR enrichment)
-            productsList = productsList.slice(0, 60);
+            // Limit to top products matching the BSR limit (default 20) for perfect consistency with estimation
+            const limit = this.bsrProductsLimit || 20;
+            productsList = productsList.slice(0, limit);
 
             // Return scrape result for batch processing
             return {

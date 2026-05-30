@@ -1,7 +1,7 @@
 // Authentication Manager for Chrome Extension
 class AuthManager {
   constructor() {
-    this.baseUrl = 'http://localhost:8000'; // Change to your API URL in production
+    this.baseUrl = 'http://127.0.0.1:8000'; // Change to your API URL in production
     this.token = null;
     this.user = null;
   }

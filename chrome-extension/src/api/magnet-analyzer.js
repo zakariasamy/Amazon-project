@@ -62,6 +62,33 @@ class MagnetAnalyzer {
     }
 
     /**
+     * Extract "Competing Products" from the search results page.
+     * Prefer the results info bar; fall back to full-page text.
+     */
+    extractCompetingProducts(doc, fallback = 0) {
+        if (!doc) return fallback || 0;
+
+        const infoEl = doc.querySelector('[data-component-type="s-result-info-bar"], .s-breadcrumb');
+        const rawText = infoEl?.textContent || doc.body?.textContent || '';
+        const text = this.arabicToLatin(rawText);
+
+        const patterns = [
+            /(?:of|over|أكثر من|اكثر من|من)\s*(\d{1,3}(?:,\d{3})*)\s*(?:results|result|النتائج|نتائج|نتيجة)?/i,
+            /(\d{1,3}(?:,\d{3})*)\s*(?:results|result|من النتائج|نتائج|نتيجة|النتائج|من نتيجة)/i,
+        ];
+
+        for (const re of patterns) {
+            const m = text.match(re);
+            if (m && m[1]) {
+                const n = parseInt(m[1].replace(/,/g, ''), 10);
+                if (!Number.isNaN(n) && n > 0) return n;
+            }
+        }
+
+        return fallback || 0;
+    }
+
+    /**
      * Get available marketplaces with Egypt as default
      */
     static getMarketplaces() {
@@ -922,30 +949,16 @@ class MagnetAnalyzer {
             const doc = parser.parseFromString(html, 'text/html');
 
             // Get competing products count
-            let resultsText = doc.body?.textContent || '';
-            resultsText = this.arabicToLatin(resultsText);
-            
-            let competingProducts = 0;
-            const countMatch = resultsText.match(/(\d{1,3}(,\d{3})*)\s*(results|result|من النتائج|نتائج|نتيجة|النتائج|من نتيجة)/i);
-            
-            if (countMatch) {
-                competingProducts = parseInt(countMatch[1].replace(/,/g, ''));
-            } else {
-                // Fallback: look for data-component-type="s-result-info-bar" or s-breadcrumb
-                const infoBar = doc.querySelector('[data-component-type="s-result-info-bar"], .s-breadcrumb');
-                if (infoBar) {
-                    let barText = this.arabicToLatin(infoBar.textContent || '');
-                    const fallbackMatch = barText.match(/(?:of|over|من|أكثر من)\s*(\d{1,3}(,\d{3})*)/i) || 
-                                          barText.match(/(\d{1,3}(,\d{3})*)\s*(?:results|result|النتائج|نتيجة|نتائج)/i);
-                    if (fallbackMatch) {
-                        competingProducts = parseInt(fallbackMatch[1].replace(/,/g, ''));
-                    }
-                }
-            }
+            let competingProducts = this.extractCompetingProducts(doc, 0);
 
             // Get products for analysis
             const products = doc.querySelectorAll('[data-asin]:not([data-asin=""])');
             const productsList = Array.from(products).slice(0, 20);
+
+            // Safe fallback if we couldn't parse the SERP counter
+            if (!competingProducts || competingProducts <= 0) {
+                competingProducts = products.length;
+            }
 
             // Calculate metrics from products
             let titleDensity = 0;
@@ -999,9 +1012,23 @@ class MagnetAnalyzer {
             const searchVolume = this.estimateSearchVolume(competingProducts, avgReviews);
 
             // Calculate Magnet IQ Score
-            const iqScore = competingProducts > 0
+            let iqScore = competingProducts > 0
                 ? Math.round(((searchVolume / competingProducts) * 10) * 100) / 100
                 : (searchVolume > 0 ? 10 : 0);
+
+            // Scale down IQ score if search volume is less than 500 to avoid inflating low-traffic keywords
+            if (searchVolume < 500 && searchVolume > 0) {
+                const penaltyFactor = Math.sqrt(searchVolume / 500);
+                iqScore = Math.round((iqScore * penaltyFactor) * 100) / 100;
+            }
+
+            // Scale down IQ score if average competitor reviews on page 1 are very high (entrenched giants)
+            let reviewPenalty = 1.0;
+            if (avgReviews > 1000)      reviewPenalty = 0.40;
+            else if (avgReviews > 500)  reviewPenalty = 0.65;
+            else if (avgReviews > 150)  reviewPenalty = 0.85;
+
+            iqScore = Math.round((iqScore * reviewPenalty) * 100) / 100;
 
             // CPR calculations
             const cpr8day = Math.ceil((searchVolume * 0.02) / 8);
@@ -1122,7 +1149,7 @@ class MagnetAnalyzer {
             };
 
             // Use the same API client pattern as Cerebro
-            const response = await fetch('http://localhost:8000/api/magnet/analyze', {
+            const response = await fetch('http://127.0.0.1:8000/api/magnet/analyze', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

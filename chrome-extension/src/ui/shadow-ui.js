@@ -1039,10 +1039,9 @@ class ShadowUI {
                 <th class="sortable col-rank" data-sort="position">Rank</th>
                 <th class="sortable col-volume" data-sort="estimated_volume">Volume</th>
                 <th class="sortable col-kd" data-sort="difficulty_score">KD</th>
-                <th class="sortable col-sales" data-sort="total_sales">Sales</th>
+                <th class="sortable col-sales" data-sort="total_sales">Sales <span title="Estimated sales based on organic ranking BSR curves. For live exact data, use Market Analysis." style="cursor:help; color:#9ca3af; font-size:10px;">ⓘ</span></th>
                 <th class="sortable col-ads" data-sort="sponsored_count">Ads</th>
-                <th class="sortable col-price" data-sort="avg_price">Avg $</th>
-                <th class="sortable col-bsr" data-sort="avg_bsr">Avg BSR</th>
+                <th class="sortable col-price" data-sort="avg_price">Avg EGP</th>
               </tr>
             </thead>
             <tbody id="ra-table-body">
@@ -1113,7 +1112,6 @@ class ShadowUI {
           <td class="col-sales">${this.formatSales(kw.total_sales)}</td>
           <td class="col-ads">${kw.sponsored_count != null ? kw.sponsored_count : '—'}</td>
           <td class="col-price">${kw.avg_price ? this.getCurrencySymbol() + kw.avg_price.toFixed(0) : '—'}</td>
-          <td class="col-bsr">${kw.avg_bsr != null && kw.avg_bsr > 0 ? '#' + kw.avg_bsr.toLocaleString() : '0'}</td>
         </tr>
       `).join('');
   }
@@ -1121,7 +1119,6 @@ class ShadowUI {
   formatVolume(volume) {
     if (volume === null || volume === undefined) return '—';
     if (volume === 0) return '0';
-    if (volume >= 10000) return `${(volume / 1000).toFixed(0)}K`;
     if (volume >= 1000) return `${(volume / 1000).toFixed(1)}K`;
     return volume.toLocaleString();
   }
