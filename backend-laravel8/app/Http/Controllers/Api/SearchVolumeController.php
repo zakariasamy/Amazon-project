@@ -263,6 +263,25 @@ class SearchVolumeController extends Controller
 
     protected function performEstimation($keyword, $marketplace, $products, bool $preferCachedVolume = false)
     {
+        // Load historical products if preferCachedVolume is true to ensure exact parity in calculations
+        if ($preferCachedVolume) {
+            try {
+                $historicalAnalysis = DB::table('search_analyses')
+                    ->where('marketplace', $marketplace)
+                    ->where('keyword', trim($keyword))
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+                if ($historicalAnalysis && !empty($historicalAnalysis->products_data)) {
+                    $decodedProducts = json_decode($historicalAnalysis->products_data, true);
+                    if (is_array($decodedProducts) && count($decodedProducts) > 0) {
+                        $products = $decodedProducts;
+                    }
+                }
+            } catch (\Exception $e) {
+                // Ignore DB exception
+            }
+        }
+
         // Save fresh BSR data to cache for analytics (but don't READ from cache - BSR changes frequently)
         $updates = [];
         $now = now();
@@ -271,7 +290,7 @@ class SearchVolumeController extends Controller
             $asin = $product['asin'] ?? null;
             if (!$asin) continue;
 
-            $hasNewBsr = !empty($product['bsr']);
+            $hasNewBsr = !empty($product['bsr']) && $product['bsr'] > 0;
 
             if ($hasNewBsr) {
                 // Save fresh BSR to cache for historical tracking
@@ -286,8 +305,24 @@ class SearchVolumeController extends Controller
                     'updated_at' => $now,
                     'created_at' => $now // used only on insert
                 ];
+            } else {
+                // BSR is missing! Read BSR, category, and sales from the cache table
+                $cachedProduct = DB::table('product_cache')
+                    ->where('asin', strtoupper(trim($asin)))
+                    ->where('marketplace', $marketplace)
+                    ->first();
+                if ($cachedProduct) {
+                    if (!empty($cachedProduct->bsr)) {
+                        $product['bsr'] = (int) $cachedProduct->bsr;
+                    }
+                    if (!empty($cachedProduct->monthly_sales_estimate)) {
+                        $product['monthly_sales'] = (int) $cachedProduct->monthly_sales_estimate;
+                    }
+                    if (!empty($cachedProduct->category)) {
+                        $product['category'] = $cachedProduct->category;
+                    }
+                }
             }
-            // NOTE: We no longer read BSR from cache - frontend enriches with fresh data
         }
         unset($product);
 
@@ -338,7 +373,25 @@ class SearchVolumeController extends Controller
         }
 
         // Calculate keyword difficulty
-        $difficulty = $this->calculateKeywordDifficulty($products);
+        if ($cachedVolume && isset($cachedVolume['difficulty_score']) && $cachedVolume['difficulty_score'] !== null) {
+            $kdScore = $cachedVolume['difficulty_score'];
+            $level = 'medium';
+            if ($kdScore < 20) $level = 'very_easy';
+            elseif ($kdScore < 40) $level = 'easy';
+            elseif ($kdScore < 60) $level = 'moderate';
+            elseif ($kdScore < 80) $level = 'hard';
+            else $level = 'very_hard';
+
+            $difficulty = [
+                'score' => $kdScore,
+                'level' => $level,
+                'breakdown' => [],
+                'recommendation' => 'Retrieved from cache (previous Market Analysis)',
+                'source' => 'cache'
+            ];
+        } else {
+            $difficulty = $this->calculateKeywordDifficulty($products);
+        }
 
         // Calculate ad density
         $adMetrics = $this->calculateAdMetrics($products);
@@ -353,6 +406,18 @@ class SearchVolumeController extends Controller
         $this->saveSearchAnalysis($keyword, $marketplace, $result, $result['demand_level'] ?? 'low', $enrichedProducts);
         $this->cacheProducts($marketplace, $enrichedProducts);
 
+        // Calculate title density on the backend: how many product titles contain the keyword (case-insensitive phrase match)
+        $titleDensity = 0;
+        $keywordLower = mb_strtolower(trim($keyword));
+        if (!empty($products)) {
+            foreach ($products as $p) {
+                $title = $p['title'] ?? '';
+                if ($title && mb_strpos(mb_strtolower($title), $keywordLower) !== false) {
+                    $titleDensity++;
+                }
+            }
+        }
+
         return [
             'success' => true,
             'keyword' => $keyword,
@@ -362,6 +427,7 @@ class SearchVolumeController extends Controller
             'difficulty' => $difficulty,
             'ad_metrics' => $adMetrics,
             'insights' => $insights,
+            'title_density' => $titleDensity,
 
             // Product statistics for display
             'product_stats' => $productStats,
@@ -1049,7 +1115,8 @@ class SearchVolumeController extends Controller
             'confidence' => 'high',
             'confidence_score' => 0.8,
             'demand_level' => $cache->search_volume_estimate >= 3000 ? 'high' : ($cache->search_volume_estimate >= 1000 ? 'medium' : 'low'),
-            'source' => 'cache'
+            'source' => 'cache',
+            'difficulty_score' => isset($cache->difficulty_score) ? (int) $cache->difficulty_score : null
         ];
     }
 }

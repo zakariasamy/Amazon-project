@@ -18,12 +18,12 @@
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
-            --dark: #0f172a;
-            --dark-light: #1e293b;
-            --dark-medium: #334155;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
             --gray: #64748b;
-            --gray-light: #94a3b8;
-            --white: #ffffff;
+            --text-color: #0f172a;
+            --text-muted: #475569;
             --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
         }
 
@@ -35,16 +35,16 @@
 
         body {
             font-family: {{ $isRtl ? "'Cairo'" : "'Inter'" }}, -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--dark);
-            color: var(--white);
+            background: var(--bg);
+            color: var(--text-color);
             min-height: 100vh;
             line-height: 1.7;
         }
 
         /* Header */
         .header {
-            background: var(--dark-light);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
             padding: 1rem 2rem;
             position: sticky;
             top: 0;
@@ -64,7 +64,7 @@
             align-items: center;
             gap: 0.75rem;
             text-decoration: none;
-            color: var(--white);
+            color: var(--text-color);
             font-weight: 700;
             font-size: 1.25rem;
         }
@@ -77,6 +77,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            color: #ffffff;
         }
 
         .header-actions {
@@ -102,18 +103,19 @@
 
         .btn-outline {
             background: transparent;
-            border: 2px solid rgba(255,255,255,0.2);
-            color: var(--white);
+            border: 2px solid var(--border-color);
+            color: var(--text-color);
         }
 
         .btn-outline:hover {
             border-color: var(--primary);
             color: var(--primary);
+            background: #f1f5f9;
         }
 
         .btn-primary {
             background: var(--gradient);
-            color: var(--white);
+            color: white;
         }
 
         .btn-primary:hover {
@@ -122,8 +124,8 @@
         }
 
         .lang-switch {
-            background: rgba(255,255,255,0.1);
-            color: var(--white);
+            background: #f1f5f9;
+            color: var(--text-muted);
             padding: 0.5rem 1rem;
             border-radius: 8px;
             font-weight: 500;
@@ -132,15 +134,16 @@
         }
 
         .lang-switch:hover {
-            background: rgba(255,255,255,0.2);
+            background: #e2e8f0;
+            color: var(--text-color);
         }
 
         /* Hero Section */
         .hero {
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(14, 165, 233, 0.15) 100%);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(14, 165, 233, 0.08) 100%);
             padding: 4rem 2rem;
             text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid var(--border-color);
         }
 
         .hero h1 {
@@ -155,7 +158,7 @@
 
         .hero p {
             font-size: 1.25rem;
-            color: var(--gray-light);
+            color: var(--text-muted);
             max-width: 700px;
             margin: 0 auto;
         }
@@ -176,23 +179,25 @@
         }
 
         .method-card {
-            background: var(--dark-light);
-            border: 1px solid rgba(255,255,255,0.1);
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
             border-radius: 20px;
             padding: 2rem;
             transition: all 0.3s;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -2px rgba(0,0,0,0.03);
         }
 
         .method-card:hover {
             transform: translateY(-5px);
             border-color: var(--primary);
-            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.2);
+            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.12);
         }
 
         .method-number {
             width: 50px;
             height: 50px;
             background: var(--gradient);
+            color: white;
             border-radius: 12px;
             display: flex;
             align-items: center;
@@ -206,10 +211,11 @@
             font-size: 1.25rem;
             font-weight: 700;
             margin-bottom: 0.75rem;
+            color: var(--text-color);
         }
 
         .method-description {
-            color: var(--gray-light);
+            color: var(--text-muted);
             margin-bottom: 1.5rem;
             font-size: 0.95rem;
         }
@@ -224,7 +230,7 @@
             padding-{{ $isRtl ? 'right' : 'left' }}: 1.5rem;
             margin-bottom: 0.75rem;
             font-size: 0.9rem;
-            color: var(--gray-light);
+            color: var(--text-muted);
         }
 
         .method-steps li::before {
@@ -236,8 +242,8 @@
         }
 
         .pro-tip {
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.2);
             border-radius: 12px;
             padding: 1rem;
             font-size: 0.875rem;
@@ -253,18 +259,19 @@
         }
 
         .pro-tip-text {
-            color: var(--gray-light);
+            color: var(--text-muted);
         }
 
         /* AI Prompt Card */
         .ai-prompt-box {
-            background: var(--dark);
+            background: var(--bg);
+            border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 1.25rem;
             margin: 1rem 0;
             font-family: monospace;
             font-size: 0.8rem;
-            color: var(--gray-light);
+            color: var(--text-muted);
             max-height: 150px;
             overflow-y: auto;
             direction: ltr;
@@ -273,11 +280,12 @@
 
         /* Info Sections */
         .info-section {
-            background: var(--dark-light);
-            border: 1px solid rgba(255,255,255,0.1);
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
             border-radius: 20px;
             padding: 2rem;
             margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);
         }
 
         .info-section-title {
@@ -287,6 +295,7 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
+            color: var(--text-color);
         }
 
         .info-section-title::before {
@@ -305,7 +314,8 @@
             align-items: flex-start;
             gap: 0.75rem;
             padding: 1rem;
-            background: var(--dark);
+            background: var(--bg);
+            border: 1px solid var(--border-color);
             border-radius: 12px;
         }
 
@@ -316,7 +326,7 @@
 
         .tip-text {
             font-size: 0.9rem;
-            color: var(--gray-light);
+            color: var(--text-muted);
         }
 
         /* Volume Guide */
@@ -327,7 +337,8 @@
         }
 
         .volume-item {
-            background: var(--dark);
+            background: var(--bg);
+            border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 1rem;
             text-align: center;
@@ -336,13 +347,13 @@
         .volume-label {
             font-size: 1.25rem;
             font-weight: 700;
-            color: var(--primary-light);
+            color: var(--primary);
             margin-bottom: 0.5rem;
         }
 
         .volume-value {
             font-size: 0.85rem;
-            color: var(--gray-light);
+            color: var(--text-muted);
         }
 
         /* Markets */
@@ -357,7 +368,8 @@
             align-items: center;
             gap: 0.75rem;
             padding: 1rem;
-            background: var(--dark);
+            background: var(--bg);
+            border: 1px solid var(--border-color);
             border-radius: 12px;
         }
 
@@ -367,7 +379,7 @@
 
         .market-name {
             font-size: 0.9rem;
-            color: var(--gray-light);
+            color: var(--text-muted);
         }
 
         /* CTA Section */
@@ -382,16 +394,18 @@
         .cta-section h2 {
             font-size: 1.75rem;
             margin-bottom: 1rem;
+            color: #ffffff;
         }
 
         .cta-section p {
             opacity: 0.9;
             margin-bottom: 2rem;
             font-size: 1.1rem;
+            color: #ffffff;
         }
 
         .btn-white {
-            background: var(--white);
+            background: #ffffff;
             color: var(--primary);
             padding: 1rem 2rem;
             font-size: 1rem;
@@ -399,16 +413,16 @@
 
         .btn-white:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(255,255,255,0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
         }
 
         /* Footer */
         .footer {
             text-align: center;
             padding: 2rem;
-            color: var(--gray);
+            color: var(--text-muted);
             font-size: 0.875rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            border-top: 1px solid var(--border-color);
         }
 
         /* Responsive */
@@ -567,14 +581,14 @@
         </div>
 
         <!-- Product Expansion Strategies Section -->
-        <section class="info-section" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%); border-color: rgba(245, 158, 11, 0.3);">
+        <section class="info-section" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(239, 68, 68, 0.03) 100%); border-color: rgba(245, 158, 11, 0.2); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);">
             <h2 class="info-section-title">🚀 {{ __('guide.expansion_title') }}</h2>
-            <p style="color: var(--gray-light); margin-bottom: 2rem;">{{ __('guide.expansion_subtitle') }}</p>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">{{ __('guide.expansion_subtitle') }}</p>
             
             <!-- Expansion Strategy 1: ASIN Mining -->
-            <div style="background: var(--dark); border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem;">
+            <div style="background: var(--bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem;">
                 <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--warning);">{{ __('guide.expansion1_title') }}</h3>
-                <p style="color: var(--gray-light); margin-bottom: 1rem; font-size: 0.9rem;">{{ __('guide.expansion1_description') }}</p>
+                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">{{ __('guide.expansion1_description') }}</p>
                 <ul class="method-steps" style="margin-bottom: 1rem;">
                     <li>{{ __('guide.expansion1_step1') }}</li>
                     <li>{{ __('guide.expansion1_step2') }}</li>
@@ -587,18 +601,18 @@
                     <div class="pro-tip-text">{{ __('guide.expansion1_tip') }}</div>
                 </div>
                 <!-- Warning Box -->
-                <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 1rem;">
+                <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 12px; padding: 1rem;">
                     <div style="color: var(--danger); font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
                         ⚠️ {{ __('guide.warning') }}
                     </div>
-                    <div style="color: var(--gray-light); font-size: 0.875rem;">{{ __('guide.expansion1_warning') }}</div>
+                    <div style="color: var(--text-muted); font-size: 0.875rem;">{{ __('guide.expansion1_warning') }}</div>
                 </div>
             </div>
             
             <!-- Expansion Strategy 2: Multi-Category Listing -->
-            <div style="background: var(--dark); border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem;">
+            <div style="background: var(--bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem;">
                 <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--warning);">{{ __('guide.expansion2_title') }}</h3>
-                <p style="color: var(--gray-light); margin-bottom: 1rem; font-size: 0.9rem;">{{ __('guide.expansion2_description') }}</p>
+                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">{{ __('guide.expansion2_description') }}</p>
                 <ul class="method-steps" style="margin-bottom: 1rem;">
                     <li>{{ __('guide.expansion2_step1') }}</li>
                     <li>{{ __('guide.expansion2_step2') }}</li>
@@ -611,11 +625,11 @@
                     <div class="pro-tip-text">{{ __('guide.expansion2_tip') }}</div>
                 </div>
                 <!-- Warning Box -->
-                <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 1rem;">
+                <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 12px; padding: 1rem;">
                     <div style="color: var(--danger); font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
                         ⚠️ {{ __('guide.warning') }}
                     </div>
-                    <div style="color: var(--gray-light); font-size: 0.875rem;">{{ __('guide.expansion2_warning') }}</div>
+                    <div style="color: var(--text-muted); font-size: 0.875rem;">{{ __('guide.expansion2_warning') }}</div>
                 </div>
             </div>
         </section>

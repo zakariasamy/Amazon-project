@@ -420,16 +420,15 @@
         </div>
         <div class="nav-links">
             <a href="{{ route('dashboard') }}">Dashboard</a>
-            <a href="{{ route('cerebro.index') }}">Keyword Analyzer</a>
-            <a href="#">Settings</a>
-            <a href="{{ route('logout') }}">Logout</a>
+            <a href="{{ route('cerebro.folders') }}">Folders</a>
+            <a href="/settings">Settings</a>
         </div>
     </nav>
     
     <div class="container">
         <!-- Breadcrumb -->
         <div class="breadcrumb">
-            <a href="{{ route('cerebro.index') }}">Keyword Analyzer</a>
+            <a href="{{ route('cerebro.folders') }}">Folders</a>
             <span>/</span>
             <span>{{ $analysis->name ?? 'Analysis #' . $analysis->id }}</span>
         </div>
@@ -444,8 +443,8 @@
                 <a href="{{ route('cerebro.export', $analysis->id) }}" class="btn btn-success">
                     📥 Export CSV
                 </a>
-                <a href="{{ route('cerebro.index') }}" class="btn btn-secondary">
-                    ← Back to List
+                <a href="{{ route('cerebro.folders') }}" class="btn btn-secondary">
+                    ← Back to Folders
                 </a>
             </div>
         </div>

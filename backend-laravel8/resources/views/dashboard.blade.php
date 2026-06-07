@@ -14,12 +14,12 @@
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
-            --dark: #0f172a;
-            --dark-light: #1e293b;
-            --dark-medium: #334155;
+            --dark: #f8fafc;
+            --dark-light: #ffffff;
+            --dark-medium: #cbd5e1;
             --gray: #64748b;
-            --gray-light: #94a3b8;
-            --white: #ffffff;
+            --gray-light: #475569;
+            --white: #0f172a;
             --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
         }
 
@@ -44,7 +44,7 @@
             bottom: 0;
             width: 260px;
             background: var(--dark-light);
-            border-right: 1px solid rgba(255,255,255,0.1);
+            border-right: 1px solid rgba(0,0,0,0.08);
             padding: 1.5rem;
             display: flex;
             flex-direction: column;
@@ -60,7 +60,7 @@
             text-decoration: none;
             margin-bottom: 2rem;
             padding-bottom: 1.5rem;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(0,0,0,0.08);
         }
 
         .sidebar-logo .icon {
@@ -71,6 +71,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            color: #ffffff;
         }
 
         .nav-section {
@@ -100,13 +101,13 @@
         }
 
         .nav-item:hover {
-            background: rgba(255,255,255,0.05);
+            background: rgba(0,0,0,0.04);
             color: var(--white);
         }
 
         .nav-item.active {
             background: var(--primary);
-            color: var(--white);
+            color: #ffffff;
         }
 
         .nav-item-icon {
@@ -116,7 +117,7 @@
         .sidebar-footer {
             margin-top: auto;
             padding-top: 1rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            border-top: 1px solid rgba(0,0,0,0.08);
         }
 
         .user-card {
@@ -190,7 +191,7 @@
 
         .btn-primary {
             background: var(--gradient);
-            color: var(--white);
+            color: #ffffff;
         }
 
         .btn-primary:hover {
@@ -200,7 +201,7 @@
 
         .btn-outline {
             background: transparent;
-            border: 2px solid rgba(255,255,255,0.2);
+            border: 2px solid rgba(0,0,0,0.08);
             color: var(--white);
         }
 
@@ -219,9 +220,10 @@
 
         .stat-card {
             background: var(--dark-light);
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(0,0,0,0.08);
             border-radius: 16px;
             padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -2px rgba(0,0,0,0.03);
         }
 
         .stat-header {
@@ -273,10 +275,11 @@
         /* Cards */
         .card {
             background: var(--dark-light);
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(0,0,0,0.08);
             border-radius: 16px;
             padding: 1.5rem;
             margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -2px rgba(0,0,0,0.03);
         }
 
         .card-header {
@@ -294,7 +297,7 @@
         /* Quick Actions */
         .quick-actions {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 1rem;
         }
 
@@ -306,7 +309,7 @@
             gap: 0.75rem;
             padding: 2rem 1.5rem;
             background: var(--dark);
-            border: 2px dashed rgba(255,255,255,0.1);
+            border: 2px dashed rgba(0,0,0,0.08);
             border-radius: 16px;
             text-decoration: none;
             color: var(--gray-light);
@@ -348,7 +351,7 @@
         .table td {
             padding: 1rem;
             text-align: left;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(0,0,0,0.06);
         }
 
         .table th {
@@ -364,7 +367,7 @@
         }
 
         .table tbody tr:hover {
-            background: rgba(255,255,255,0.02);
+            background: rgba(0,0,0,0.01);
         }
 
         .keyword-cell {
@@ -480,45 +483,9 @@
                     <span class="nav-item-icon">🏠</span>
                     Dashboard
                 </a>
-                <a href="/cerebro" class="nav-item">
-                    <span class="nav-item-icon">🧠</span>
-                    Competitor Keyword Analyzer
-                </a>
-                <a href="/magnet" class="nav-item">
-                    <span class="nav-item-icon">🧲</span>
-                    Keyword Magnet
-                </a>
                 <a href="/dashboard/cerebro/folders" class="nav-item">
                     <span class="nav-item-icon">📁</span>
                     Keyword Folders
-                </a>
-                <a href="/keywords" class="nav-item">
-                    <span class="nav-item-icon">🔍</span>
-                    Keyword Research
-                </a>
-                <a href="/reverse-asin" class="nav-item">
-                    <span class="nav-item-icon">🔄</span>
-                    Reverse ASIN
-                </a>
-                <a href="/products" class="nav-item">
-                    <span class="nav-item-icon">📦</span>
-                    Product Tracker
-                </a>
-            </div>
-
-            <div class="nav-section">
-                <div class="nav-section-title">Tools</div>
-                <a href="/guide" class="nav-item">
-                    <span class="nav-item-icon">📚</span>
-                    Product Research Guide
-                </a>
-                <a href="/calculator" class="nav-item">
-                    <span class="nav-item-icon">🧮</span>
-                    FBA Calculator
-                </a>
-                <a href="/history" class="nav-item">
-                    <span class="nav-item-icon">📜</span>
-                    Search History
                 </a>
             </div>
 
@@ -527,10 +494,6 @@
                 <a href="/settings" class="nav-item">
                     <span class="nav-item-icon">⚙️</span>
                     Settings
-                </a>
-                <a href="/subscription" class="nav-item">
-                    <span class="nav-item-icon">💎</span>
-                    Subscription
                 </a>
             </div>
         </nav>
@@ -608,25 +571,15 @@
                 <h2 class="card-title">Quick Actions</h2>
             </div>
             <div class="quick-actions">
-                <a href="/cerebro" class="quick-action">
-                    <span class="quick-action-icon">🧠</span>
-                    <span class="quick-action-title">Competitor Keyword Analyzer</span>
-                    <span class="quick-action-desc">Multi-ASIN keyword analysis</span>
+                <a href="/dashboard/cerebro/folders" class="quick-action">
+                    <span class="quick-action-icon">📁</span>
+                    <span class="quick-action-title">Keyword Folders</span>
+                    <span class="quick-action-desc">Organize and manage your keyword lists</span>
                 </a>
-                <a href="/magnet" class="quick-action">
-                    <span class="quick-action-icon">🧲</span>
-                    <span class="quick-action-title">Keyword Magnet</span>
-                    <span class="quick-action-desc">Discover keyword ideas</span>
-                </a>
-                <a href="#" class="quick-action">
-                    <span class="quick-action-icon">🔍</span>
-                    <span class="quick-action-title">Keyword Research</span>
-                    <span class="quick-action-desc">Find high-volume keywords</span>
-                </a>
-                <a href="#" class="quick-action">
-                    <span class="quick-action-icon">🧮</span>
-                    <span class="quick-action-title">FBA Calculator</span>
-                    <span class="quick-action-desc">Calculate profit margins</span>
+                <a href="/settings" class="quick-action">
+                    <span class="quick-action-icon">⚙️</span>
+                    <span class="quick-action-title">Account Settings</span>
+                    <span class="quick-action-desc">Configure API settings and options</span>
                 </a>
             </div>
         </div>
@@ -635,7 +588,6 @@
         <div class="card">
             <div class="card-header">
                 <h2 class="card-title">Recent Searches</h2>
-                <a href="/history" class="btn btn-outline" style="padding: 0.5rem 1rem; font-size: 0.8rem;">View All</a>
             </div>
             <div class="table-wrapper">
                 <div class="empty-state">

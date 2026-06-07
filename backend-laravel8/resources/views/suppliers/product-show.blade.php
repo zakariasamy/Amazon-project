@@ -21,12 +21,12 @@
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
-            --dark: #0f172a;
-            --dark-light: #1e293b;
-            --dark-medium: #334155;
+            --dark: #f8fafc;
+            --dark-light: #ffffff;
+            --dark-medium: #cbd5e1;
             --gray: #64748b;
-            --gray-light: #94a3b8;
-            --white: #ffffff;
+            --gray-light: #475569;
+            --white: #0f172a;
             --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
         }
 
@@ -42,7 +42,7 @@
 
         .header {
             background: var(--dark-light);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(0,0,0,0.08);
             padding: 1rem 2rem;
             position: sticky;
             top: 0;
@@ -83,30 +83,39 @@
 
         .btn-outline {
             background: transparent;
-            border: 2px solid rgba(255,255,255,0.2);
+            border: 2px solid rgba(0,0,0,0.08);
             color: var(--white);
         }
+        .btn-outline:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
 
-        .btn-primary { background: var(--gradient); color: var(--white); }
+        .btn-primary { background: var(--gradient); color: #ffffff; }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
         .btn-success { background: var(--success); color: white; }
         .btn-telegram { background: #0088cc; color: white; }
         .btn-whatsapp { background: #25d366; color: white; }
         .btn-lg { padding: 1rem 2rem; font-size: 1rem; }
 
-        .main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        .main { max-width: 1200px; margin: 0 auto; padding: 2.5rem 2rem; }
 
         .breadcrumb {
             display: flex;
             align-items: center;
             gap: 0.5rem;
             font-size: 0.85rem;
-            color: var(--gray-light);
+            color: var(--gray);
             margin-bottom: 2rem;
         }
 
         .breadcrumb a {
-            color: var(--primary-light);
+            color: var(--primary);
             text-decoration: none;
+            font-weight: 500;
         }
 
         .breadcrumb a:hover { text-decoration: underline; }
@@ -124,7 +133,7 @@
         .main-image {
             width: 100%;
             aspect-ratio: 1;
-            background: var(--dark-light);
+            background: #f1f5f9;
             border-radius: 20px;
             display: flex;
             align-items: center;
@@ -133,6 +142,7 @@
             color: var(--gray);
             overflow: hidden;
             margin-bottom: 1rem;
+            border: 1px solid rgba(0,0,0,0.06);
         }
 
         .main-image img {
@@ -150,8 +160,8 @@
         .thumbnail {
             width: 80px;
             height: 80px;
-            background: var(--dark-light);
-            border: 2px solid rgba(255,255,255,0.1);
+            background: #f1f5f9;
+            border: 2px solid rgba(0,0,0,0.06);
             border-radius: 12px;
             cursor: pointer;
             overflow: hidden;
@@ -203,8 +213,8 @@
 
         /* Product Details */
         .product-details h1 {
-            font-size: 1.75rem;
-            font-weight: 700;
+            font-size: 2rem;
+            font-weight: 800;
             margin-bottom: 1rem;
             line-height: 1.3;
         }
@@ -212,19 +222,21 @@
         .supplier-link {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.75rem;
             background: var(--dark-light);
-            padding: 0.75rem 1rem;
+            border: 1px solid rgba(0,0,0,0.08);
+            padding: 0.75rem 1.25rem;
             border-radius: 12px;
             margin-bottom: 1.5rem;
             text-decoration: none;
             color: var(--white);
             transition: all 0.3s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
 
         .supplier-link:hover {
             border-color: var(--primary);
-            background: rgba(99, 102, 241, 0.1);
+            background: rgba(99, 102, 241, 0.05);
         }
 
         .supplier-avatar {
@@ -235,27 +247,30 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            color: #ffffff;
         }
 
         .verified-badge {
-            background: rgba(16, 185, 129, 0.1);
+            background: rgba(16, 185, 129, 0.08);
             color: var(--success);
-            padding: 0.2rem 0.5rem;
+            padding: 0.25rem 0.6rem;
             border-radius: 20px;
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             font-weight: 600;
         }
 
         .price-section {
             background: var(--dark-light);
+            border: 1px solid rgba(0,0,0,0.08);
             border-radius: 16px;
-            padding: 1.5rem;
+            padding: 1.75rem;
             margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
         }
 
         .price-main {
-            font-size: 2rem;
-            font-weight: 700;
+            font-size: 2.25rem;
+            font-weight: 800;
             color: var(--success);
             margin-bottom: 0.5rem;
         }
@@ -270,25 +285,26 @@
             display: inline-flex;
             align-items: center;
             gap: 0.3rem;
-            background: rgba(245, 158, 11, 0.1);
+            background: rgba(245, 158, 11, 0.08);
             color: var(--warning);
             padding: 0.5rem 1rem;
             border-radius: 20px;
             font-size: 0.9rem;
             font-weight: 600;
-            margin-bottom: 1rem;
+            margin-bottom: 1.25rem;
         }
 
         .price-tiers {
-            margin-top: 1rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            padding-top: 1rem;
+            margin-top: 1.25rem;
+            border-top: 1px solid rgba(0,0,0,0.08);
+            padding-top: 1.25rem;
         }
 
         .price-tiers-title {
             font-size: 0.85rem;
             color: var(--gray);
             margin-bottom: 0.75rem;
+            font-weight: 600;
         }
 
         .tier-row {
@@ -299,20 +315,21 @@
         }
 
         .tier-row:not(:last-child) {
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(0,0,0,0.06);
         }
 
-        .tier-qty { color: var(--gray-light); }
-        .tier-price { color: var(--success); font-weight: 600; }
+        .tier-qty { color: var(--gray-light); font-weight: 500; }
+        .tier-price { color: var(--success); font-weight: 700; }
 
         .product-description {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.75rem;
         }
 
         .product-description h3 {
-            font-size: 1rem;
+            font-size: 1.05rem;
             margin-bottom: 0.75rem;
-            color: var(--gray);
+            color: var(--white);
+            font-weight: 700;
         }
 
         .product-description p {
@@ -328,13 +345,14 @@
 
         /* Related Products */
         .related-section {
-            border-top: 1px solid rgba(255,255,255,0.1);
-            padding-top: 2rem;
+            border-top: 1px solid rgba(0,0,0,0.08);
+            padding-top: 2.5rem;
+            margin-top: 2.5rem;
         }
 
         .section-title {
-            font-size: 1.25rem;
-            font-weight: 700;
+            font-size: 1.35rem;
+            font-weight: 750;
             margin-bottom: 1.5rem;
         }
 
@@ -346,22 +364,24 @@
 
         .related-card {
             background: var(--dark-light);
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(0,0,0,0.08);
             border-radius: 12px;
             overflow: hidden;
             text-decoration: none;
             color: var(--white);
-            transition: all 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
         }
 
         .related-card:hover {
             transform: translateY(-4px);
             border-color: var(--primary);
+            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.1);
         }
 
         .related-image {
             height: 120px;
-            background: var(--dark);
+            background: #f1f5f9;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -388,7 +408,7 @@
 
         .related-price {
             color: var(--success);
-            font-weight: 600;
+            font-weight: 700;
         }
 
         @media (max-width: 768px) {

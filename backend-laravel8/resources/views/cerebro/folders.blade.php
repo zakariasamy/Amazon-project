@@ -11,14 +11,14 @@
         
         body {
             font-family: 'Inter', -apple-system, system-ui, sans-serif;
-            background: #0f172a;
-            color: #e5e7eb;
+            background: #f8fafc;
+            color: #0f172a;
             min-height: 100vh;
         }
         
         .nav {
-            background: #1e293b;
-            border-bottom: 1px solid #374151;
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
             padding: 16px 24px;
             display: flex;
             justify-content: space-between;
@@ -31,7 +31,7 @@
             gap: 12px;
             font-size: 18px;
             font-weight: 700;
-            color: #fff;
+            color: #0f172a;
             text-decoration: none;
         }
         
@@ -41,7 +41,7 @@
         }
         
         .nav-links a {
-            color: #9ca3af;
+            color: #475569;
             text-decoration: none;
             font-size: 14px;
             font-weight: 500;
@@ -68,10 +68,11 @@
         .page-title {
             font-size: 28px;
             font-weight: 700;
+            color: #0f172a;
         }
         
         .page-subtitle {
-            color: #9ca3af;
+            color: #475569;
             font-size: 14px;
             margin-top: 4px;
         }
@@ -103,18 +104,19 @@
         }
         
         .folder-card {
-            background: #1e293b;
-            border: 1px solid #374151;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
             padding: 20px;
             transition: all 0.2s;
             cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         }
         
         .folder-card:hover {
             border-color: #6366f1;
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.15);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.12);
         }
         
         .folder-header {
@@ -137,19 +139,19 @@
         .folder-name {
             font-size: 16px;
             font-weight: 600;
-            color: #fff;
+            color: #0f172a;
         }
         
         .folder-desc {
             font-size: 12px;
-            color: #9ca3af;
+            color: #475569;
         }
         
         .folder-stats {
             display: flex;
             gap: 24px;
             padding-top: 16px;
-            border-top: 1px solid #374151;
+            border-top: 1px solid #e2e8f0;
             margin-top: 16px;
         }
         
@@ -165,7 +167,7 @@
         
         .folder-stat-label {
             font-size: 10px;
-            color: #9ca3af;
+            color: #64748b;
             text-transform: uppercase;
             margin-top: 2px;
         }
@@ -180,28 +182,29 @@
             flex: 1;
             padding: 8px;
             border-radius: 6px;
-            border: 1px solid #374151;
+            border: 1px solid #e2e8f0;
             background: transparent;
-            color: #9ca3af;
+            color: #475569;
             font-size: 12px;
             cursor: pointer;
             transition: all 0.2s;
         }
         
         .btn-action:hover {
-            background: #374151;
-            color: #fff;
+            background: #f1f5f9;
+            color: #0f172a;
         }
         
         .btn-action.danger:hover {
             background: #ef4444;
             border-color: #ef4444;
+            color: #fff;
         }
         
         .empty-state {
             text-align: center;
             padding: 80px 20px;
-            color: #9ca3af;
+            color: #475569;
         }
         
         .empty-icon {
@@ -212,7 +215,8 @@
         .modal-backdrop {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
             z-index: 1000;
             display: none;
             align-items: center;
@@ -222,18 +226,20 @@
         .modal-backdrop.active { display: flex; }
         
         .modal {
-            background: #1e293b;
-            border: 1px solid #374151;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 16px;
             padding: 24px;
             width: 100%;
             max-width: 450px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
         
         .modal-title {
             font-size: 18px;
             font-weight: 700;
             margin-bottom: 24px;
+            color: #0f172a;
         }
         
         .form-group {
@@ -244,7 +250,7 @@
             display: block;
             margin-bottom: 8px;
             font-size: 13px;
-            color: #9ca3af;
+            color: #475569;
             font-weight: 600;
         }
         
@@ -252,9 +258,9 @@
             width: 100%;
             padding: 12px;
             border-radius: 8px;
-            border: 1px solid #374151;
-            background: #0f172a;
-            color: #e5e7eb;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: #0f172a;
             font-size: 14px;
         }
         
@@ -278,7 +284,7 @@
         }
         
         .color-option:hover, .color-option.selected {
-            border-color: white;
+            border-color: #0f172a;
             transform: scale(1.1);
         }
         
@@ -292,16 +298,16 @@
         .btn-cancel {
             padding: 10px 20px;
             border-radius: 8px;
-            border: 1px solid #374151;
+            border: 1px solid #e2e8f0;
             background: transparent;
-            color: #9ca3af;
+            color: #475569;
             cursor: pointer;
             font-size: 14px;
         }
         
         .btn-cancel:hover {
-            background: #374151;
-            color: #fff;
+            background: #f1f5f9;
+            color: #0f172a;
         }
     </style>
 </head>
@@ -313,7 +319,6 @@
         </a>
         <div class="nav-links">
             <a href="{{ route('dashboard') }}">Dashboard</a>
-            <a href="{{ route('cerebro.index') }}">Keyword Analyzer</a>
             <a href="{{ route('cerebro.folders') }}" class="active">Folders</a>
         </div>
     </nav>

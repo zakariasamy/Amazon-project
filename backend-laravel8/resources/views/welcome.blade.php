@@ -22,11 +22,11 @@
             --accent: #f59e0b;
             --success: #10b981;
             --danger: #ef4444;
-            --dark: #0f172a;
-            --dark-light: #1e293b;
+            --dark: #f8fafc;
+            --dark-light: #ffffff;
             --gray: #64748b;
-            --gray-light: #94a3b8;
-            --white: #ffffff;
+            --gray-light: #475569;
+            --white: #0f172a;
             --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
         }
 
@@ -55,9 +55,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(15, 23, 42, 0.9);
+            background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(0,0,0,0.08);
         }
 
         .logo {
@@ -128,7 +128,7 @@
 
         .btn-primary {
             background: var(--gradient);
-            color: var(--white);
+            color: #ffffff;
             box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
         }
 
@@ -140,12 +140,12 @@
         .lang-btn {
             padding: 0.5rem 1rem;
             font-size: 0.85rem;
-            background: rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.05);
             border: none;
         }
 
         .lang-btn:hover {
-            background: rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.1);
         }
 
         /* Hero Section */
@@ -259,8 +259,8 @@
             background: var(--dark-light);
             border-radius: 20px;
             padding: 1.5rem;
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            border: 1px solid rgba(0,0,0,0.08);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.1);
         }
 
         .dashboard-header {
@@ -285,7 +285,7 @@
             display: flex;
             justify-content: space-between;
             padding: 0.75rem 0;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(0,0,0,0.06);
         }
 
         .dashboard-row:last-child {
@@ -336,7 +336,7 @@
 
         .feature-card {
             background: var(--dark);
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(0,0,0,0.08);
             border-radius: 20px;
             padding: 2rem;
             transition: all 0.3s;
@@ -388,7 +388,7 @@
 
         .pricing-card {
             background: var(--dark-light);
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(0,0,0,0.08);
             border-radius: 20px;
             padding: 2.5rem;
             position: relative;
@@ -454,7 +454,7 @@
         .footer {
             padding: 3rem 2rem;
             background: var(--dark-light);
-            border-top: 1px solid rgba(255,255,255,0.1);
+            border-top: 1px solid rgba(0,0,0,0.08);
             text-align: center;
         }
 

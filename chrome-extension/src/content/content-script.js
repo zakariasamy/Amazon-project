@@ -1244,6 +1244,7 @@ async function analyzeSearchPage() {
         let fetchLimit = 15; // Safe default
         let batchSize = 3;
         let batchDelay = 500;
+        let testModeEnabled = false;
 
         try {
             const configResponse = await fetch(`http://127.0.0.1:8000/api/settings?_t=${Date.now()}`);
@@ -1257,6 +1258,7 @@ async function analyzeSearchPage() {
                 batchDelay = settings.search_page_bsr_delay_ms || 300;
 
                 if (settings.test_mode_enabled === true || settings.test_mode_enabled === '1') {
+                    testModeEnabled = true;
                     keyword = settings.test_mode_keyword || 'portal scale body';
                     console.log(`[Search Page] Test Mode Active: FORCE overriding search keyword with "${keyword}"`);
                 }
@@ -1402,7 +1404,7 @@ async function analyzeSearchPage() {
         document.getElementById('search-analyzer-loading')?.remove();
 
         // Display results with products data for table
-        displaySearchVolumeResults(keyword, result, products);
+        displaySearchVolumeResults(keyword, result, products, testModeEnabled);
 
     } catch (error) {
         document.getElementById('search-analyzer-loading')?.remove();
@@ -1428,7 +1430,7 @@ function generateSalesBars(sales, maxSales) {
     return html;
 }
 
-function displaySearchVolumeResults(keyword, result, scrapedProducts = []) {
+function displaySearchVolumeResults(keyword, result, scrapedProducts = [], testModeEnabled = false) {
     // Remove existing panel (both inline and floating)
     document.getElementById('search-volume-panel')?.remove();
     document.getElementById('search-volume-inline-panel')?.remove();
@@ -1505,7 +1507,7 @@ function displaySearchVolumeResults(keyword, result, scrapedProducts = []) {
             <div style="background: #232f3e; padding: 16px; display: flex; flex-direction: column; justify-content: center;">
                 <div style="color: #9ca3af; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; text-transform: uppercase;">🔍 Search Volume / mo</div>
                 <div style="font-size: 22px; font-weight: 700; color: #fff; line-height: 1.2;">
-                    ${sv.estimated?.toLocaleString() || 'N/A'}
+                    ${sv.estimated?.toLocaleString() || 'N/A'}${testModeEnabled ? '<span style="font-size:10px; color:#a78bfa; margin-left:4px; vertical-align:middle;" title="Calculated from real-time logic (no cache)">🧪 calculated</span>' : ''}
                 </div>
                 <div style="font-size: 11px; margin-top: 4px; font-weight: 500; color: ${sv.demand_level === 'high' ? '#4ade80' : sv.demand_level === 'medium' ? '#facc15' : '#9ca3af'}">
                     ${sv.demand_level === 'high' ? '⚡ High Demand' : sv.demand_level === 'medium' ? '⚠️ Medium Demand' : '💤 Low Demand'}
@@ -1516,7 +1518,7 @@ function displaySearchVolumeResults(keyword, result, scrapedProducts = []) {
             <div style="background: #232f3e; padding: 16px; display: flex; flex-direction: column; justify-content: center;">
                 <div style="color: #9ca3af; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; text-transform: uppercase;">🔥 Difficulty (KD)</div>
                 <div style="font-size: 22px; font-weight: 700; color: ${kdColor}; line-height: 1.2;">
-                    ${kd.score}<span style="font-size: 12px; color: #6b7280; font-weight: 400;">/100</span>
+                    ${kd.score}<span style="font-size: 12px; color: #6b7280; font-weight: 400;">/100</span>${testModeEnabled ? '<span style="font-size:10px; color:#a78bfa; margin-left:4px; vertical-align:middle;" title="Calculated from real-time logic (no cache)">🧪 calculated</span>' : ''}
                 </div>
                 <div style="font-size: 11px; color: ${kdColor}; margin-top: 4px; font-weight: 500;">
                     ${kd.level === 'very_easy' ? '✅ Very Easy' : kd.level === 'easy' ? '✅ Easy' : kd.level === 'moderate' ? '⚠️ Moderate' : kd.level === 'hard' ? '🔴 Hard' : kd.level === 'very_hard' ? '🔴 Very Hard' : ''}

@@ -178,22 +178,23 @@ class ReverseAsin {
                                     });
                                 } else {
                                     console.log(`[Reverse ASIN] Reusing cached results from today for ${asin}`);
-                                this.isRunning = false;
-                                this.updateProgress('complete', lastResult.keywords_tested, lastResult.keywords_tested, 'Loaded from cache!');
+                                    this.isRunning = false;
+                                    this.updateProgress('complete', lastResult.keywords_tested, lastResult.keywords_tested, 'Loaded from cache!');
 
-                                return {
-                                    asin: lastResult.asin,
-                                    productInfo: {
-                                        title: lastResult.title,
-                                        category: lastResult.category
-                                    },
-                                    keywordsTested: lastResult.keywords_tested,
-                                    keywordsFound: lastResult.keywords_found,
-                                    keywords: cachedKeywords.filter(k => k.found),
-                                    allKeywords: cachedKeywords,
-                                    source: lastResult.source || 'cache',
-                                    isCached: true
-                                };
+                                    return {
+                                        asin: lastResult.asin,
+                                        productInfo: {
+                                            title: lastResult.title,
+                                            category: lastResult.category
+                                        },
+                                        keywordsTested: lastResult.keywords_tested,
+                                        keywordsFound: lastResult.keywords_found,
+                                        keywords: cachedKeywords.filter(k => k.found),
+                                        allKeywords: cachedKeywords,
+                                        source: lastResult.source || 'cache',
+                                        isCached: true,
+                                        test_mode_enabled: this.testModeEnabled
+                                    };
                                 }
                             }
                         }
@@ -534,7 +535,8 @@ class ReverseAsin {
                     if (b.found) return 1;
                     return 0;
                 }),
-                source: `${productInfo ? 'carousel_analysis' : 'title_fallback'}${this.testModeEnabled ? '_test_mode' : ''}`
+                source: `${productInfo ? 'carousel_analysis' : 'title_fallback'}${this.testModeEnabled ? '_test_mode' : ''}`,
+                test_mode_enabled: this.testModeEnabled
             };
 
             // Save complete results to backend for history and analysis

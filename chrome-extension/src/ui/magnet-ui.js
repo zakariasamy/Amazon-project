@@ -105,7 +105,7 @@ class MagnetUI {
             'difficulty ↕': 'الصعوبة ↕',
             'title density': 'كثافة العنوان',
             'competition': 'المنافسة',
-            'cpr': 'معدل الإطلاق (CPR)',
+            'est. daily sales': 'المبيعات اليومية المقدرة',
             'sales': 'المبيعات',
             'avg price': 'متوسط السعر',
             'words': 'الكلمات',
@@ -459,8 +459,8 @@ class MagnetUI {
             // Display results
             this.displayResults(results);
 
-            // Auto-save to backend
-            this.saveToBackend(results);
+            // Auto-save disabled per user request
+
 
         } catch (error) {
             console.error('[Magnet] Analysis error:', error);
@@ -602,6 +602,8 @@ class MagnetUI {
         const content = this.panel?.querySelector('#magnet-content');
         if (!content) return;
 
+        this.currentResults = results;
+
         const keywords = results.keywords || [];
         const marketplace = results.marketplace || window.location.hostname;
         const currency = this.getMarketplaceCurrency(marketplace);
@@ -667,18 +669,10 @@ class MagnetUI {
                     background: #374151; border: none; color: #e5e7eb;
                     padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 11px;
                 ">🔥 High Volume</button>
-                <button class="magnet-quick-filter" data-filter="opportunity" style="
-                    background: #374151; border: none; color: #e5e7eb;
-                    padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 11px;
-                ">💎 Opportunity</button>
                 <button class="magnet-quick-filter" data-filter="low_competition" style="
                     background: #374151; border: none; color: #e5e7eb;
                     padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 11px;
                 ">✅ Low Competition</button>
-                <button class="magnet-quick-filter" data-filter="easy_wins" style="
-                    background: #374151; border: none; color: #e5e7eb;
-                    padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 11px;
-                ">🎯 Easy Wins</button>
                 <button class="magnet-quick-filter" data-filter="long_tail" style="
                     background: #374151; border: none; color: #e5e7eb;
                     padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 11px;
@@ -688,10 +682,10 @@ class MagnetUI {
                     background: #374151; border: none; color: #9ca3af;
                     padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 11px;
                 ">⚙️ Advanced Filters</button>
-                <button id="magnet-export-btn" style="
-                    background: #10b981; border: none; color: white;
+                <button id="magnet-save-btn" style="
+                    background: #3b82f6; border: none; color: white;
                     padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;
-                ">📥 Export</button>
+                ">💾 Save to Dashboard</button>
                 <a href="${this.getDashboardUrl()}" target="_blank" style="
                     background: #6366f1; border: none; color: white;
                     padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;
@@ -755,15 +749,6 @@ class MagnetUI {
                         </div>
                     </div>
                     
-                    <!-- Title Density -->
-                    <div>
-                        <label style="color: #9ca3af; display: block; margin-bottom: 4px;">Title Density Max</label>
-                        <input type="number" id="filter-td-max" placeholder="e.g. 10" min="0" max="48" style="
-                            width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #374151;
-                            background: #1e293b; color: #e5e7eb; font-size: 11px;
-                        ">
-                    </div>
-                    
                     <!-- Competition Max -->
                     <div>
                         <label style="color: #9ca3af; display: block; margin-bottom: 4px;">Competition Max</label>
@@ -771,21 +756,6 @@ class MagnetUI {
                             width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #374151;
                             background: #1e293b; color: #e5e7eb; font-size: 11px;
                         ">
-                    </div>
-                    
-                    <!-- Match Type -->
-                    <div>
-                        <label style="color: #9ca3af; display: block; margin-bottom: 4px;">Match Type</label>
-                        <select id="filter-match-type" style="
-                            width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #374151;
-                            background: #1e293b; color: #e5e7eb; font-size: 11px;
-                        ">
-                            <option value="all">All Types</option>
-                            <option value="seed">Seed</option>
-                            <option value="autocomplete">Autocomplete</option>
-                            <option value="related">Related</option>
-                            <option value="title">Title</option>
-                        </select>
                     </div>
                 </div>
                 
@@ -838,9 +808,7 @@ class MagnetUI {
                             <th style="padding: 12px; text-align: left; border-bottom: 2px solid #374151;">Keyword</th>
                             <th style="padding: 12px; text-align: right; border-bottom: 2px solid #374151; cursor: pointer;" data-sort="search_volume">Volume ↕</th>
                             <th style="padding: 12px; text-align: right; border-bottom: 2px solid #374151; cursor: pointer;" data-sort="magnet_iq_score">Difficulty ↕</th>
-                            <th style="padding: 12px; text-align: right; border-bottom: 2px solid #374151;">Title Density</th>
-                            <th style="padding: 12px; text-align: right; border-bottom: 2px solid #374151;">Competition</th>
-                            <th style="padding: 12px; text-align: right; border-bottom: 2px solid #374151;">CPR</th>
+                            <th style="padding: 12px; text-align: right; border-bottom: 2px solid #374151;">Est. Daily Sales</th>
                             <th style="padding: 12px; text-align: right; border-bottom: 2px solid #374151;">Sales</th>
                             <th style="padding: 12px; text-align: right; border-bottom: 2px solid #374151;">Avg Price</th>
                             <th style="padding: 12px; text-align: center; border-bottom: 2px solid #374151;">Words</th>
@@ -897,8 +865,21 @@ class MagnetUI {
             this.filterBySearch(e.target.value);
         });
 
-        // Export
-        content.querySelector('#magnet-export-btn')?.addEventListener('click', () => this.exportCSV());
+        // Save to Dashboard (manual trigger)
+        content.querySelector('#magnet-save-btn')?.addEventListener('click', async (e) => {
+            const btn = e.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            try {
+                await this.saveToBackend(this.currentResults);
+            } catch (error) {
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        });
 
         // Sorting
         content.querySelectorAll('th[data-sort]').forEach(th => {
@@ -913,25 +894,23 @@ class MagnetUI {
     }
 
     /**
+     * Format difficulty score — IDENTICAL to shadow-ui.js fmtKd.
+     * Returns '—' for null/zero, otherwise coloured score + label.
+     */
+    fmtKd(score, testMode = false) {
+        if (score == null || score === 0) return '<span style="color:#6b7280;">—</span>';
+        const color = score >= 70 ? '#f87171' : score >= 50 ? '#fb923c' : score >= 30 ? '#facc15' : '#4ade80';
+        const label = score >= 70 ? 'Hard' : score >= 50 ? 'Med' : score >= 30 ? 'Fair' : 'Easy';
+        const hint = testMode ? '<span style="font-size:10px;color:#a78bfa;margin-left:4px;vertical-align:middle;" title="Calculated from real-time logic (no cache)">🧪</span>' : '';
+        return `<span style="color:${color};font-weight:700;">${score}</span><span style="color:#6b7280;font-size:10px;margin-left:2px;">${label}</span>${hint}`;
+    }
+
+    /**
      * Render keyword rows
      */
     renderKeywordRows(keywords, currency = 'USD') {
+        const testMode = this.currentResults?.test_mode_enabled === true;
         return keywords.map((kw, idx) => {
-            let kdColor = '#4ade80'; // Bright Green
-            let levelText = 'Easy';
-            const score = Math.round(kw.magnet_iq_score || 0);
-
-            if (score >= 70) {
-                kdColor = '#f87171'; // Red
-                levelText = 'Hard';
-            } else if (score >= 50) {
-                kdColor = '#fb923c'; // Orange
-                levelText = 'Med';
-            } else if (score >= 30) {
-                kdColor = '#facc15'; // Yellow
-                levelText = 'Fair';
-            }
-
             const typeColors = {
                 'seed': '#fbbf24',
                 'autocomplete': '#a78bfa',
@@ -944,6 +923,8 @@ class MagnetUI {
                 'youtube': '#f87171'
             };
 
+            const volHint = testMode ? '<span style="font-size:10px;color:#a78bfa;margin-left:4px;vertical-align:middle;" title="Calculated from real-time logic (no cache)">🧪</span>' : '';
+
             return `
                 <tr style="background: ${idx % 2 === 0 ? '#0f172a' : '#1e293b'}; border-bottom: 1px solid #374151;">
                     <td style="padding: 10px 12px;">
@@ -952,12 +933,8 @@ class MagnetUI {
                             background: none; border: none; color: #6b7280; cursor: pointer; margin-left: 6px; font-size: 12px;
                         " title="Copy">📋</button>
                     </td>
-                    <td style="padding: 10px 12px; text-align: right; color: #60a5fa; font-weight: 600;">${this.formatNumber(kw.search_volume)}</td>
-                    <td style="padding: 10px 12px; text-align: right;">
-                        <span style="color: ${kdColor}; font-weight: 700;">${score}</span><span style="color: #6b7280; font-size: 10px; margin-left: 2px;">${levelText}</span>
-                    </td>
-                    <td style="padding: 10px 12px; text-align: right; color: #9ca3af;">${kw.title_density}/48</td>
-                    <td style="padding: 10px 12px; text-align: right; color: #f472b6;">${this.formatNumber(kw.competing_products)}</td>
+                    <td style="padding: 10px 12px; text-align: right; color: #60a5fa; font-weight: 600;">${this.formatNumber(kw.search_volume)}${volHint}</td>
+                    <td style="padding: 10px 12px; text-align: right;">${this.fmtKd(kw.magnet_iq_score != null ? Math.round(kw.magnet_iq_score) : null, testMode)}</td>
                     <td style="padding: 10px 12px; text-align: right; color: #f59e0b;">${kw.cpr_8day}/day</td>
                     <td style="padding: 10px 12px; text-align: right; color: #10b981;">${this.formatNumber(kw.keyword_sales)}</td>
                     <td style="padding: 10px 12px; text-align: right;">
@@ -1000,14 +977,8 @@ class MagnetUI {
             case 'high_volume':
                 filtered = filtered.filter(kw => kw.search_volume >= 1000);
                 break;
-            case 'opportunity':
-                filtered = filtered.filter(kw => kw.magnet_iq_score <= 40 && kw.title_density <= 5);
-                break;
             case 'low_competition':
                 filtered = filtered.filter(kw => kw.competing_products <= 10000 && kw.search_volume >= 500);
-                break;
-            case 'easy_wins':
-                filtered = filtered.filter(kw => kw.cpr_8day <= 10 && kw.competing_products <= 5000 && kw.search_volume >= 300);
                 break;
             case 'long_tail':
                 filtered = filtered.filter(kw => kw.word_count >= 4 && kw.search_volume >= 100);
@@ -1040,9 +1011,7 @@ class MagnetUI {
         const iqMax = parseFloat(this.panel?.querySelector('#filter-iq-max')?.value) || Infinity;
         const wordsMin = parseInt(this.panel?.querySelector('#filter-words-min')?.value) || 0;
         const wordsMax = parseInt(this.panel?.querySelector('#filter-words-max')?.value) || Infinity;
-        const tdMax = parseInt(this.panel?.querySelector('#filter-td-max')?.value) || Infinity;
         const compMax = parseInt(this.panel?.querySelector('#filter-comp-max')?.value) || Infinity;
-        const matchType = this.panel?.querySelector('#filter-match-type')?.value || 'all';
         const includePhrase = (this.panel?.querySelector('#filter-include')?.value || '').toLowerCase().trim();
         const excludePhrase = (this.panel?.querySelector('#filter-exclude')?.value || '').toLowerCase().trim();
         const searchText = (this.panel?.querySelector('#magnet-search')?.value || '').toLowerCase().trim();
@@ -1057,14 +1026,8 @@ class MagnetUI {
             // Word count filter
             if (kw.word_count < wordsMin || kw.word_count > wordsMax) return false;
 
-            // Title density filter
-            if ((kw.title_density || 0) > tdMax) return false;
-
             // Competition filter
             if ((kw.competing_products || 0) > compMax) return false;
-
-            // Match type filter
-            if (matchType !== 'all' && kw.match_type !== matchType) return false;
 
             // Include phrase filter (any of the comma-separated phrases)
             if (includePhrase) {
@@ -1110,7 +1073,7 @@ class MagnetUI {
             '#filter-vol-min', '#filter-vol-max',
             '#filter-iq-min', '#filter-iq-max',
             '#filter-words-min', '#filter-words-max',
-            '#filter-td-max', '#filter-comp-max',
+            '#filter-comp-max',
             '#filter-include', '#filter-exclude',
             '#magnet-search'
         ];
@@ -1119,9 +1082,6 @@ class MagnetUI {
             const el = this.panel?.querySelector(id);
             if (el) el.value = '';
         });
-
-        const matchType = this.panel?.querySelector('#filter-match-type');
-        if (matchType) matchType.value = 'all';
     }
 
     /**
@@ -1165,48 +1125,6 @@ class MagnetUI {
         }
     }
 
-    /**
-     * Export to CSV
-     */
-    exportCSV() {
-        if (!this.resultsData?.keywords?.length) {
-            this.showToast('No data to export', 'warning');
-            return;
-        }
-
-        const headers = ['Keyword', 'Search Volume', 'Difficulty', 'Title Density', 'Competing Products',
-            'Word Count', 'CPR 8-Day', 'CPR Total', 'Keyword Sales', 'Avg Price', 'Avg Reviews',
-            'Sponsored Count', 'Match Type', 'Relevance Score'];
-
-        const rows = this.resultsData.keywords.map(kw => [
-            `"${kw.keyword}"`,
-            kw.search_volume,
-            Math.round(kw.magnet_iq_score || 0),
-            kw.title_density,
-            kw.competing_products,
-            kw.word_count,
-            kw.cpr_8day,
-            kw.cpr_total || 0,
-            kw.keyword_sales,
-            kw.avg_price?.toFixed(2) || 0,
-            kw.avg_reviews || 0,
-            kw.sponsored_count || 0,
-            kw.match_type,
-            kw.relevance_score || 0
-        ]);
-
-        const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `magnet_keywords_${Date.now()}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-
-        this.showToast('CSV exported successfully!', 'success');
-    }
 
     /**
      * Save results to backend
@@ -1375,7 +1293,8 @@ class MagnetUI {
 
     getDashboardUrl() {
         // Get the API URL from ApiClient if available
-        return 'http://127.0.0.1:8000/magnet';
+        const apiBase = window.API_CONFIG?.baseUrl || 'http://127.0.0.1:8000';
+        return `${apiBase}/dashboard`;
     }
 
     formatNumber(num) {

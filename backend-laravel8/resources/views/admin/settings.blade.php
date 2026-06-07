@@ -7,11 +7,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0f172a;
-            --panel: #1e293b;
-            --line: rgba(255,255,255,0.08);
-            --text: #f8fafc;
-            --muted: #94a3b8;
+            --bg: #f8fafc;
+            --panel: #ffffff;
+            --line: rgba(0, 0, 0, 0.08);
+            --text: #0f172a;
+            --muted: #475569;
             --primary: #6366f1;
             --primary-hover: #4f46e5;
             --success: #10b981;
@@ -48,7 +48,7 @@
             font-size: 32px;
             font-weight: 800;
             letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #475569 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -62,18 +62,18 @@
         .back {
             color: var(--text);
             text-decoration: none;
-            border: 1px solid rgba(255,255,255,0.15);
+            border: 1px solid rgba(0, 0, 0, 0.15);
             border-radius: 10px;
             padding: 10px 18px;
             font-weight: 600;
             font-size: 14px;
             transition: all 0.2s;
-            background: rgba(255,255,255,0.02);
+            background: rgba(0, 0, 0, 0.02);
         }
 
         .back:hover {
-            background: rgba(255,255,255,0.08);
-            border-color: rgba(255,255,255,0.25);
+            background: rgba(0, 0, 0, 0.04);
+            border-color: rgba(0, 0, 0, 0.25);
         }
 
         .notice {
@@ -95,7 +95,7 @@
             margin-bottom: 24px;
             overflow-x: auto;
             padding: 4px;
-            background: rgba(30, 41, 59, 0.6);
+            background: rgba(226, 232, 240, 0.8);
             border-radius: 12px;
             border: 1px solid var(--line);
             scrollbar-width: none;
@@ -123,7 +123,7 @@
 
         .tab-btn:hover {
             color: var(--text);
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(0, 0, 0, 0.04);
         }
 
         .tab-btn.active {
@@ -138,7 +138,7 @@
             border: 1px solid var(--line);
             border-radius: 14px;
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
         }
 
         .tab-panel {
@@ -157,7 +157,7 @@
 
         .panel-header {
             padding: 20px 24px;
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(0, 0, 0, 0.01);
             border-bottom: 1px solid var(--line);
             display: flex;
             justify-content: space-between;
@@ -169,7 +169,7 @@
         .panel-title {
             font-size: 18px;
             font-weight: 800;
-            color: #c7d2fe;
+            color: var(--primary);
             margin: 0;
             display: flex;
             align-items: center;
@@ -182,8 +182,8 @@
         }
 
         .btn-action {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.1);
             color: var(--muted);
             font-size: 12px;
             font-weight: 600;
@@ -194,9 +194,9 @@
         }
 
         .btn-action:hover {
-            color: #fff;
-            background: rgba(255,255,255,0.08);
-            border-color: rgba(255,255,255,0.2);
+            color: var(--text);
+            background: rgba(0, 0, 0, 0.08);
+            border-color: rgba(0, 0, 0, 0.2);
         }
 
         .setting {
@@ -214,7 +214,7 @@
             font-weight: 700;
             font-size: 15px;
             margin-bottom: 6px;
-            color: #f1f5f9;
+            color: var(--text);
         }
 
         .description {
@@ -234,9 +234,9 @@
         input[type="text"] {
             width: 100%;
             padding: 10px 14px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid #cbd5e1;
             border-radius: 8px;
-            background: #0f172a;
+            background: #ffffff;
             color: var(--text);
             font: inherit;
             font-size: 14px;
@@ -272,10 +272,10 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #334155;
+            background-color: #cbd5e1;
             transition: .25s ease;
             border-radius: 34px;
-            border: 1px solid rgba(255,255,255,0.05);
+            border: 1px solid rgba(0,0,0,0.05);
         }
 
         .slider:before {
@@ -308,7 +308,7 @@
             display: flex;
             justify-content: flex-end;
             padding: 20px 24px;
-            background: rgba(0, 0, 0, 0.15);
+            background: rgba(0, 0, 0, 0.03);
             border-top: 1px solid var(--line);
         }
 
@@ -590,7 +590,7 @@
                         <div class="description">{{ $magnetSettings['attribute_variation_scope']['description'] }}</div>
                         @error('attribute_variation_scope')<div class="error-msg">{{ $message }}</div>@enderror
                     </div>
-                    <select name="attribute_variation_scope" style="width: 100%; padding: 10px 14px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; background: #0f172a; color: var(--text); font-size: 14px;">
+                    <select name="attribute_variation_scope" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: var(--text); font-size: 14px;">
                         <option value="seed" {{ old('attribute_variation_scope', $magnetSettings['attribute_variation_scope']['value']) === 'seed' ? 'selected' : '' }}>Seed Keyword Only</option>
                         <option value="top_n" {{ old('attribute_variation_scope', $magnetSettings['attribute_variation_scope']['value']) === 'top_n' ? 'selected' : '' }}>Top N Organic Results</option>
                         <option value="all" {{ old('attribute_variation_scope', $magnetSettings['attribute_variation_scope']['value']) === 'all' ? 'selected' : '' }}>All Scraped Results</option>

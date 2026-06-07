@@ -14,14 +14,14 @@
         
         body {
             font-family: 'Inter', -apple-system, system-ui, sans-serif;
-            background: #0f172a;
-            color: #e5e7eb;
+            background: #f8fafc;
+            color: #0f172a;
             min-height: 100vh;
         }
         
         .nav {
-            background: #1e293b;
-            border-bottom: 1px solid #374151;
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
             padding: 16px 24px;
             display: flex;
             justify-content: space-between;
@@ -34,7 +34,7 @@
             gap: 12px;
             font-size: 18px;
             font-weight: 700;
-            color: #fff;
+            color: #0f172a;
         }
         
         .nav-links {
@@ -43,7 +43,7 @@
         }
         
         .nav-links a {
-            color: #9ca3af;
+            color: #475569;
             text-decoration: none;
             font-size: 14px;
             font-weight: 500;
@@ -51,7 +51,7 @@
         }
         
         .nav-links a:hover, .nav-links a.active {
-            color: #f59e0b;
+            color: #d97706;
         }
         
         .container {
@@ -70,11 +70,11 @@
         .page-title {
             font-size: 24px;
             font-weight: 700;
-            color: #fff;
+            color: #0f172a;
         }
         
         .page-subtitle {
-            color: #9ca3af;
+            color: #475569;
             font-size: 14px;
             margin-top: 4px;
         }
@@ -107,15 +107,16 @@
         }
         
         .stat-card {
-            background: #1e293b;
-            border: 1px solid #374151;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
             padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         }
         
         .stat-label {
             font-size: 12px;
-            color: #9ca3af;
+            color: #64748b;
             text-transform: uppercase;
             font-weight: 600;
             letter-spacing: 0.5px;
@@ -125,24 +126,26 @@
             font-size: 28px;
             font-weight: 700;
             margin-top: 8px;
+            color: #0f172a;
         }
         
-        .stat-value.amber { color: #fbbf24; }
-        .stat-value.blue { color: #60a5fa; }
+        .stat-value.amber { color: #d97706; }
+        .stat-value.blue { color: #2563eb; }
         .stat-value.green { color: #10b981; }
-        .stat-value.orange { color: #f59e0b; }
+        .stat-value.orange { color: #d97706; }
         
         .analysis-list {
-            background: #1e293b;
-            border: 1px solid #374151;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
             overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
         
         .analysis-header {
-            background: #0f172a;
+            background: #f8fafc;
             padding: 16px 20px;
-            border-bottom: 1px solid #374151;
+            border-bottom: 1px solid #e2e8f0;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -151,7 +154,7 @@
         .analysis-header h2 {
             font-size: 16px;
             font-weight: 600;
-            color: #fff;
+            color: #0f172a;
         }
         
         .analysis-table {
@@ -160,35 +163,36 @@
         }
         
         .analysis-table th {
-            background: #0f172a;
+            background: #f8fafc;
             padding: 12px 16px;
             text-align: left;
             font-size: 11px;
             text-transform: uppercase;
-            color: #9ca3af;
+            color: #475569;
             font-weight: 600;
             letter-spacing: 0.5px;
-            border-bottom: 1px solid #374151;
+            border-bottom: 1px solid #e2e8f0;
         }
         
         .analysis-table td {
             padding: 16px;
-            border-bottom: 1px solid #374151;
+            border-bottom: 1px solid #e2e8f0;
+            color: #0f172a;
         }
         
         .analysis-table tr:hover {
-            background: #0f172a;
+            background: #f8fafc;
         }
         
         .analysis-name {
             font-weight: 600;
-            color: #fff;
+            color: #0f172a;
         }
         
         .seed-keyword {
             display: inline-block;
-            background: #f59e0b20;
-            color: #fbbf24;
+            background: rgba(245, 158, 11, 0.1);
+            color: #d97706;
             padding: 4px 10px;
             border-radius: 6px;
             font-size: 12px;
@@ -197,8 +201,8 @@
         }
         
         .marketplace-badge {
-            background: #6366f120;
-            color: #a78bfa;
+            background: rgba(99, 102, 241, 0.1);
+            color: #4f46e5;
             padding: 4px 10px;
             border-radius: 6px;
             font-size: 11px;
@@ -223,24 +227,24 @@
         }
         
         .status-completed {
-            background: #10b98120;
+            background: rgba(16, 185, 129, 0.1);
             color: #10b981;
         }
         
         .status-pending {
-            background: #f59e0b20;
+            background: rgba(245, 158, 11, 0.1);
             color: #f59e0b;
         }
         
         .status-failed {
-            background: #ef444420;
+            background: rgba(239, 68, 68, 0.1);
             color: #ef4444;
         }
         
         .action-btn {
-            background: #374151;
-            border: none;
-            color: #9ca3af;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #475569;
             padding: 8px 12px;
             border-radius: 6px;
             cursor: pointer;
@@ -250,23 +254,26 @@
         }
         
         .action-btn:hover {
-            background: #4b5563;
-            color: #fff;
+            background: #f1f5f9;
+            color: #0f172a;
         }
         
         .action-btn.view {
-            background: #f59e0b20;
-            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+            color: #d97706;
+            border-color: rgba(245, 158, 11, 0.2);
         }
         
         .action-btn.export {
-            background: #10b98120;
+            background: rgba(16, 185, 129, 0.1);
             color: #10b981;
+            border-color: rgba(16, 185, 129, 0.2);
         }
         
         .action-btn.delete {
-            background: #ef444420;
+            background: rgba(239, 68, 68, 0.1);
             color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.2);
         }
         
         .empty-state {
@@ -282,17 +289,17 @@
         .empty-state-title {
             font-size: 18px;
             font-weight: 600;
-            color: #fff;
+            color: #0f172a;
             margin-bottom: 8px;
         }
         
         .empty-state-text {
-            color: #9ca3af;
+            color: #475569;
             font-size: 14px;
         }
         
         .time-ago {
-            color: #6b7280;
+            color: #64748b;
             font-size: 12px;
         }
         
@@ -305,8 +312,9 @@
         
         .pagination a {
             padding: 8px 14px;
-            background: #374151;
-            color: #e5e7eb;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #475569;
             border-radius: 6px;
             text-decoration: none;
             font-size: 13px;
@@ -314,6 +322,8 @@
         
         .pagination a:hover, .pagination a.active {
             background: #f59e0b;
+            color: white;
+            border-color: #f59e0b;
         }
         
         .alert {
@@ -324,15 +334,15 @@
         }
         
         .alert-success {
-            background: #10b98120;
+            background: rgba(16, 185, 129, 0.1);
             color: #10b981;
-            border: 1px solid #10b98140;
+            border: 1px solid rgba(16, 185, 129, 0.2);
         }
         
         .alert-error {
-            background: #ef444420;
+            background: rgba(239, 68, 68, 0.1);
             color: #ef4444;
-            border: 1px solid #ef444440;
+            border: 1px solid rgba(239, 68, 68, 0.2);
         }
     </style>
 </head>
@@ -344,9 +354,8 @@
         </div>
         <div class="nav-links">
             <a href="{{ route('dashboard') }}">Dashboard</a>
-            <a href="{{ route('cerebro.index') }}">Keyword Analyzer</a>
-            <a href="{{ route('magnet.index') }}" class="active">Keyword Magnet</a>
-            <a href="{{ route('logout') }}">Logout</a>
+            <a href="{{ route('cerebro.folders') }}">Folders</a>
+            <a href="/settings">Settings</a>
         </div>
     </nav>
     
@@ -367,28 +376,28 @@
         </div>
         
         <!-- How to Use Card -->
-        <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid #374151; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-            <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #fff; display: flex; align-items: center; gap: 10px;">
+        <div style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+            <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #0f172a; display: flex; align-items: center; gap: 10px;">
                 <span>🚀</span> How to Run New Analysis
             </h2>
             <div style="display: flex; gap: 24px; flex-wrap: wrap;">
                 <div style="flex: 1; min-width: 200px;">
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                        <span style="background: #f59e0b; color: #000; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">1</span>
-                        <span style="color: #e5e7eb;">Go to <a href="https://www.amazon.eg" target="_blank" style="color: #f59e0b; text-decoration: none;">Amazon.eg</a> and search for a product</span>
+                        <span style="background: #f59e0b; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">1</span>
+                        <span style="color: #475569;">Go to <a href="https://www.amazon.eg" target="_blank" style="color: #d97706; text-decoration: none; font-weight: 600;">Amazon.eg</a> and search for a product</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                        <span style="background: #f59e0b; color: #000; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">2</span>
-                        <span style="color: #e5e7eb;">Click the <strong style="color: #f59e0b;">🧲 Keyword Magnet</strong> button in the toolbar</span>
+                        <span style="background: #f59e0b; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">2</span>
+                        <span style="color: #475569;">Click the <strong style="color: #d97706;">🧲 Keyword Magnet</strong> button in the toolbar</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 12px;">
-                        <span style="background: #f59e0b; color: #000; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">3</span>
-                        <span style="color: #e5e7eb;">Results will be saved here automatically</span>
+                        <span style="background: #f59e0b; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">3</span>
+                        <span style="color: #475569;">Results will be saved here automatically</span>
                     </div>
                 </div>
-                <div style="flex: 1; min-width: 200px; background: #0f172a; border-radius: 8px; padding: 16px; border: 1px solid #374151;">
-                    <p style="color: #9ca3af; font-size: 13px; margin: 0;">
-                        💡 <strong style="color: #fff;">Tip:</strong> The Chrome extension runs directly on Amazon pages with full access to product data, giving you accurate keyword suggestions, search volume estimates, and title density metrics.
+                <div style="flex: 1; min-width: 200px; background: #ffffff; border-radius: 8px; padding: 16px; border: 1px solid #e2e8f0; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);">
+                    <p style="color: #64748b; font-size: 13px; margin: 0;">
+                        💡 <strong style="color: #0f172a;">Tip:</strong> The Chrome extension runs directly on Amazon pages with full access to product data, giving you accurate keyword suggestions, search volume estimates, and title density metrics.
                     </p>
                 </div>
             </div>
@@ -461,7 +470,6 @@
                         </td>
                         <td>
                             <a href="{{ route('magnet.show', $analysis->id) }}" class="action-btn view">👁️ View</a>
-                            <a href="{{ route('magnet.export', $analysis->id) }}" class="action-btn export">📥 CSV</a>
                             <form action="{{ route('magnet.destroy', $analysis->id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete this analysis?')">
                                 @csrf
                                 @method('DELETE')

@@ -21,12 +21,12 @@
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
-            --dark: #0f172a;
-            --dark-light: #1e293b;
-            --dark-medium: #334155;
+            --dark: #f8fafc;
+            --dark-light: #ffffff;
+            --dark-medium: #cbd5e1;
             --gray: #64748b;
-            --gray-light: #94a3b8;
-            --white: #ffffff;
+            --gray-light: #475569;
+            --white: #0f172a;
             --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
         }
 
@@ -42,7 +42,7 @@
 
         .header {
             background: var(--dark-light);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(0,0,0,0.08);
             padding: 1rem 2rem;
             position: sticky;
             top: 0;
@@ -83,28 +83,37 @@
 
         .btn-outline {
             background: transparent;
-            border: 2px solid rgba(255,255,255,0.2);
+            border: 2px solid rgba(0,0,0,0.08);
             color: var(--white);
+        }
+        .btn-outline:hover {
+            border-color: var(--primary);
+            color: var(--primary);
         }
 
         .btn-primary {
             background: var(--gradient);
-            color: var(--white);
+            color: #ffffff;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
         }
 
         .btn-success { background: var(--success); color: white; }
         .btn-telegram { background: #0088cc; color: white; }
         .btn-whatsapp { background: #25d366; color: white; }
 
-        .main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        .main { max-width: 1200px; margin: 0 auto; padding: 2.5rem 2rem; }
 
         /* Supplier Profile Header */
         .profile-header {
             background: var(--dark-light);
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(0,0,0,0.08);
             border-radius: 20px;
             padding: 2rem;
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
         }
 
         .profile-top {
@@ -124,13 +133,14 @@
             justify-content: center;
             font-size: 3rem;
             flex-shrink: 0;
+            color: #ffffff;
         }
 
         .profile-info { flex: 1; }
 
         .profile-name {
-            font-size: 1.75rem;
-            font-weight: 700;
+            font-size: 1.85rem;
+            font-weight: 800;
             margin-bottom: 0.5rem;
             display: flex;
             align-items: center;
@@ -138,7 +148,7 @@
         }
 
         .verified-badge {
-            background: rgba(16, 185, 129, 0.1);
+            background: rgba(16, 185, 129, 0.08);
             color: var(--success);
             padding: 0.25rem 0.75rem;
             border-radius: 20px;
@@ -147,9 +157,10 @@
         }
 
         .profile-category {
-            color: var(--primary-light);
+            color: var(--primary);
             font-size: 0.9rem;
             margin-bottom: 1rem;
+            font-weight: 600;
         }
 
         .profile-description {
@@ -162,15 +173,15 @@
         .profile-stats {
             display: flex;
             gap: 2rem;
-            padding: 1rem 0;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 1.25rem 0;
+            border-top: 1px solid rgba(0,0,0,0.08);
+            border-bottom: 1px solid rgba(0,0,0,0.08);
             margin-bottom: 1.5rem;
         }
 
         .stat-item { text-align: {{ $isRtl ? 'right' : 'left' }}; }
-        .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--primary-light); }
-        .stat-label { font-size: 0.8rem; color: var(--gray); }
+        .stat-value { font-size: 1.65rem; font-weight: 800; color: var(--primary); }
+        .stat-label { font-size: 0.8rem; color: var(--gray); font-weight: 600; }
 
         .profile-location {
             display: flex;
@@ -190,7 +201,7 @@
         /* Products Section */
         .section-title {
             font-size: 1.5rem;
-            font-weight: 700;
+            font-weight: 800;
             margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
@@ -200,26 +211,27 @@
         .products-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
+            gap: 2rem;
         }
 
         .product-card {
             background: var(--dark-light);
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(0,0,0,0.08);
             border-radius: 16px;
             overflow: hidden;
-            transition: all 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
         }
 
         .product-card:hover {
             transform: translateY(-4px);
             border-color: var(--primary);
-            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.2);
+            box-shadow: 0 12px 20px -5px rgba(99, 102, 241, 0.1), 0 8px 16px -8px rgba(99, 102, 241, 0.1);
         }
 
         .product-image {
             height: 180px;
-            background: var(--dark);
+            background: #f1f5f9;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -236,8 +248,8 @@
         .product-content { padding: 1.25rem; }
 
         .product-name {
-            font-size: 1rem;
-            font-weight: 600;
+            font-size: 1.05rem;
+            font-weight: 700;
             margin-bottom: 0.5rem;
             line-height: 1.4;
         }
@@ -249,11 +261,12 @@
             display: flex;
             align-items: center;
             gap: 0.3rem;
+            font-weight: 600;
         }
 
         .product-price {
-            font-size: 1.25rem;
-            font-weight: 700;
+            font-size: 1.35rem;
+            font-weight: 800;
             color: var(--success);
             margin-bottom: 0.5rem;
         }
@@ -268,22 +281,23 @@
         .tier-row {
             display: flex;
             justify-content: space-between;
-            padding: 0.25rem 0;
+            padding: 0.35rem 0;
             font-size: 0.8rem;
             color: var(--gray-light);
         }
 
         .tier-row:not(:last-child) {
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(0,0,0,0.06);
         }
 
-        .tier-qty { color: var(--gray); }
-        .tier-price { color: var(--success); font-weight: 600; }
+        .tier-qty { color: var(--gray-light); font-weight: 500; }
+        .tier-price { color: var(--success); font-weight: 700; }
 
         .no-products {
             text-align: center;
-            padding: 3rem;
+            padding: 4rem;
             color: var(--gray-light);
+            font-size: 1.05rem;
         }
 
         @media (max-width: 768px) {

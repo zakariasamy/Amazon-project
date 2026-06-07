@@ -14,14 +14,14 @@
         
         body {
             font-family: 'Inter', -apple-system, system-ui, sans-serif;
-            background: #0f172a;
-            color: #e5e7eb;
+            background: #f8fafc;
+            color: #0f172a;
             min-height: 100vh;
         }
         
         .nav {
-            background: #1e293b;
-            border-bottom: 1px solid #374151;
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
             padding: 16px 24px;
             display: flex;
             justify-content: space-between;
@@ -34,7 +34,7 @@
             gap: 12px;
             font-size: 18px;
             font-weight: 700;
-            color: #fff;
+            color: #0f172a;
         }
         
         .nav-links {
@@ -43,7 +43,7 @@
         }
         
         .nav-links a {
-            color: #9ca3af;
+            color: #475569;
             text-decoration: none;
             font-size: 14px;
             font-weight: 500;
@@ -70,11 +70,11 @@
         .page-title {
             font-size: 24px;
             font-weight: 700;
-            color: #fff;
+            color: #0f172a;
         }
         
         .page-subtitle {
-            color: #9ca3af;
+            color: #475569;
             font-size: 14px;
             margin-top: 4px;
         }
@@ -107,15 +107,16 @@
         }
         
         .stat-card {
-            background: #1e293b;
-            border: 1px solid #374151;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
             padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         }
         
         .stat-label {
             font-size: 12px;
-            color: #9ca3af;
+            color: #64748b;
             text-transform: uppercase;
             font-weight: 600;
             letter-spacing: 0.5px;
@@ -125,24 +126,26 @@
             font-size: 28px;
             font-weight: 700;
             margin-top: 8px;
+            color: #0f172a;
         }
         
-        .stat-value.purple { color: #a78bfa; }
-        .stat-value.blue { color: #60a5fa; }
+        .stat-value.purple { color: #8b5cf6; }
+        .stat-value.blue { color: #2563eb; }
         .stat-value.green { color: #10b981; }
-        .stat-value.orange { color: #f59e0b; }
+        .stat-value.orange { color: #d97706; }
         
         .analysis-list {
-            background: #1e293b;
-            border: 1px solid #374151;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
             overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
         
         .analysis-header {
-            background: #0f172a;
+            background: #f8fafc;
             padding: 16px 20px;
-            border-bottom: 1px solid #374151;
+            border-bottom: 1px solid #e2e8f0;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -151,7 +154,7 @@
         .analysis-header h2 {
             font-size: 16px;
             font-weight: 600;
-            color: #fff;
+            color: #0f172a;
         }
         
         .analysis-table {
@@ -160,29 +163,30 @@
         }
         
         .analysis-table th {
-            background: #0f172a;
+            background: #f8fafc;
             padding: 12px 16px;
             text-align: left;
             font-size: 11px;
             text-transform: uppercase;
-            color: #9ca3af;
+            color: #475569;
             font-weight: 600;
             letter-spacing: 0.5px;
-            border-bottom: 1px solid #374151;
+            border-bottom: 1px solid #e2e8f0;
         }
         
         .analysis-table td {
             padding: 16px;
-            border-bottom: 1px solid #374151;
+            border-bottom: 1px solid #e2e8f0;
+            color: #0f172a;
         }
         
         .analysis-table tr:hover {
-            background: #0f172a;
+            background: #f8fafc;
         }
         
         .analysis-name {
             font-weight: 600;
-            color: #fff;
+            color: #0f172a;
         }
         
         .analysis-asins {
@@ -193,17 +197,18 @@
         }
         
         .asin-badge {
-            background: #374151;
-            color: #e5e7eb;
+            background: #f1f5f9;
+            color: #475569;
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 10px;
             font-family: monospace;
+            border: 1px solid #e2e8f0;
         }
         
         .marketplace-badge {
-            background: #6366f120;
-            color: #a78bfa;
+            background: rgba(99, 102, 241, 0.1);
+            color: #4f46e5;
             padding: 4px 10px;
             border-radius: 6px;
             font-size: 11px;
@@ -224,24 +229,24 @@
         }
         
         .status-completed {
-            background: #10b98120;
+            background: rgba(16, 185, 129, 0.1);
             color: #10b981;
         }
         
         .status-pending {
-            background: #f59e0b20;
+            background: rgba(245, 158, 11, 0.1);
             color: #f59e0b;
         }
         
         .status-failed {
-            background: #ef444420;
+            background: rgba(239, 68, 68, 0.1);
             color: #ef4444;
         }
         
         .action-btn {
-            background: #374151;
-            border: none;
-            color: #9ca3af;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #475569;
             padding: 8px 12px;
             border-radius: 6px;
             cursor: pointer;
@@ -251,23 +256,26 @@
         }
         
         .action-btn:hover {
-            background: #4b5563;
-            color: #fff;
+            background: #f1f5f9;
+            color: #0f172a;
         }
         
         .action-btn.view {
-            background: #6366f120;
+            background: rgba(99, 102, 241, 0.1);
             color: #6366f1;
+            border-color: rgba(99, 102, 241, 0.2);
         }
         
         .action-btn.export {
-            background: #10b98120;
+            background: rgba(16, 185, 129, 0.1);
             color: #10b981;
+            border-color: rgba(16, 185, 129, 0.2);
         }
         
         .action-btn.delete {
-            background: #ef444420;
+            background: rgba(239, 68, 68, 0.1);
             color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.2);
         }
         
         .empty-state {
@@ -283,17 +291,17 @@
         .empty-state-title {
             font-size: 18px;
             font-weight: 600;
-            color: #fff;
+            color: #0f172a;
             margin-bottom: 8px;
         }
         
         .empty-state-text {
-            color: #9ca3af;
+            color: #475569;
             font-size: 14px;
         }
         
         .time-ago {
-            color: #6b7280;
+            color: #64748b;
             font-size: 12px;
         }
         
@@ -306,8 +314,9 @@
         
         .pagination a {
             padding: 8px 14px;
-            background: #374151;
-            color: #e5e7eb;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #475569;
             border-radius: 6px;
             text-decoration: none;
             font-size: 13px;
@@ -315,6 +324,8 @@
         
         .pagination a:hover, .pagination a.active {
             background: #6366f1;
+            color: white;
+            border-color: #6366f1;
         }
     </style>
 </head>
@@ -326,9 +337,8 @@
         </div>
         <div class="nav-links">
             <a href="{{ route('dashboard') }}">Dashboard</a>
-            <a href="{{ route('cerebro.index') }}" class="active">Keyword Analyzer</a>
-            <a href="#">Settings</a>
-            <a href="{{ route('logout') }}">Logout</a>
+            <a href="{{ route('cerebro.folders') }}">Folders</a>
+            <a href="/settings">Settings</a>
         </div>
     </nav>
     

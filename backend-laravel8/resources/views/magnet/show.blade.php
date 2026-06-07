@@ -14,14 +14,14 @@
         
         body {
             font-family: 'Inter', -apple-system, system-ui, sans-serif;
-            background: #0f172a;
-            color: #e5e7eb;
+            background: #f8fafc;
+            color: #0f172a;
             min-height: 100vh;
         }
         
         .nav {
-            background: #1e293b;
-            border-bottom: 1px solid #374151;
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
             padding: 16px 24px;
             display: flex;
             justify-content: space-between;
@@ -34,7 +34,7 @@
             gap: 12px;
             font-size: 18px;
             font-weight: 700;
-            color: #fff;
+            color: #0f172a;
         }
         
         .nav-links {
@@ -43,7 +43,7 @@
         }
         
         .nav-links a {
-            color: #9ca3af;
+            color: #475569;
             text-decoration: none;
             font-size: 14px;
             font-weight: 500;
@@ -51,7 +51,7 @@
         }
         
         .nav-links a:hover {
-            color: #f59e0b;
+            color: #d97706;
         }
         
         .container {
@@ -69,12 +69,12 @@
         }
         
         .breadcrumb a {
-            color: #f59e0b;
+            color: #d97706;
             text-decoration: none;
         }
         
         .breadcrumb span {
-            color: #6b7280;
+            color: #64748b;
         }
         
         .page-header {
@@ -87,18 +87,18 @@
         .page-title {
             font-size: 24px;
             font-weight: 700;
-            color: #fff;
+            color: #0f172a;
         }
         
         .page-subtitle {
-            color: #9ca3af;
+            color: #475569;
             font-size: 14px;
             margin-top: 4px;
         }
         
         .seed-highlight {
-            color: #fbbf24;
-            background: #f59e0b20;
+            color: #d97706;
+            background: rgba(245, 158, 11, 0.1);
             padding: 2px 8px;
             border-radius: 4px;
         }
@@ -128,8 +128,13 @@
         }
         
         .btn-secondary {
-            background: #374151;
-            color: #e5e7eb;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+        }
+        .btn-secondary:hover {
+            background: #f1f5f9;
+            color: #0f172a;
         }
         
         .btn-success {
@@ -139,11 +144,12 @@
         
         /* Analysis Info Card */
         .info-card {
-            background: #1e293b;
-            border: 1px solid #374151;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         }
         
         .info-grid {
@@ -158,7 +164,7 @@
         
         .info-label {
             font-size: 11px;
-            color: #9ca3af;
+            color: #64748b;
             text-transform: uppercase;
             font-weight: 600;
             letter-spacing: 0.5px;
@@ -168,18 +174,19 @@
         .info-value {
             font-size: 22px;
             font-weight: 700;
+            color: #0f172a;
         }
         
-        .info-value.amber { color: #fbbf24; }
-        .info-value.blue { color: #60a5fa; }
+        .info-value.amber { color: #d97706; }
+        .info-value.blue { color: #2563eb; }
         .info-value.green { color: #10b981; }
-        .info-value.orange { color: #f59e0b; }
-        .info-value.cyan { color: #22d3ee; }
+        .info-value.orange { color: #d97706; }
+        .info-value.cyan { color: #0ea5e9; }
         
         /* Filters */
         .filters-bar {
-            background: #1e293b;
-            border: 1px solid #374151;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
             padding: 16px 20px;
             margin-bottom: 24px;
@@ -187,10 +194,11 @@
             align-items: center;
             gap: 16px;
             flex-wrap: wrap;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
         
         .filter-label {
-            color: #9ca3af;
+            color: #475569;
             font-size: 13px;
             font-weight: 600;
         }
@@ -202,8 +210,8 @@
             font-weight: 500;
             cursor: pointer;
             border: none;
-            background: #374151;
-            color: #e5e7eb;
+            background: #f1f5f9;
+            color: #475569;
             transition: all 0.2s;
             text-decoration: none;
         }
@@ -216,39 +224,40 @@
         .filter-input {
             padding: 8px 12px;
             border-radius: 6px;
-            border: 1px solid #374151;
-            background: #0f172a;
-            color: #e5e7eb;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: #0f172a;
             font-size: 13px;
             width: 150px;
         }
         
         .filter-input::placeholder {
-            color: #6b7280;
+            color: #94a3b8;
         }
         
         .filter-select {
             padding: 8px 12px;
             border-radius: 6px;
-            border: 1px solid #374151;
-            background: #0f172a;
-            color: #e5e7eb;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: #0f172a;
             font-size: 13px;
             cursor: pointer;
         }
         
         /* Keywords Table */
         .keywords-table-container {
-            background: #1e293b;
-            border: 1px solid #374151;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
             overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
         
         .table-header {
-            background: #0f172a;
+            background: #f8fafc;
             padding: 16px 20px;
-            border-bottom: 1px solid #374151;
+            border-bottom: 1px solid #e2e8f0;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -257,7 +266,7 @@
         .table-header h2 {
             font-size: 16px;
             font-weight: 600;
-            color: #fff;
+            color: #0f172a;
         }
         
         .keywords-table {
@@ -267,15 +276,15 @@
         }
         
         .keywords-table th {
-            background: #0f172a;
+            background: #f8fafc;
             padding: 12px 14px;
             text-align: left;
             font-size: 10px;
             text-transform: uppercase;
-            color: #9ca3af;
+            color: #475569;
             font-weight: 600;
             letter-spacing: 0.5px;
-            border-bottom: 2px solid #374151;
+            border-bottom: 2px solid #e2e8f0;
             position: sticky;
             top: 0;
         }
@@ -291,16 +300,17 @@
         
         .keywords-table td {
             padding: 12px 14px;
-            border-bottom: 1px solid #374151;
+            border-bottom: 1px solid #e2e8f0;
+            color: #0f172a;
         }
         
         .keywords-table tr:hover {
-            background: #0f172a;
+            background: #f8fafc;
         }
         
         .keyword-text {
             font-weight: 600;
-            color: #fff;
+            color: #0f172a;
         }
         
         .iq-score {
@@ -309,10 +319,10 @@
             border-radius: 4px;
         }
         
-        .iq-excellent { background: #10b98120; color: #10b981; }
-        .iq-good { background: #f59e0b20; color: #f59e0b; }
-        .iq-moderate { background: #fb923c20; color: #fb923c; }
-        .iq-poor { background: #ef444420; color: #ef4444; }
+        .iq-excellent { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+        .iq-good { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        .iq-moderate { background: rgba(251, 146, 60, 0.1); color: #fb923c; }
+        .iq-poor { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
         
         .match-badge {
             padding: 4px 8px;
@@ -322,15 +332,15 @@
             text-transform: uppercase;
         }
         
-        .match-seed { background: #f59e0b20; color: #fbbf24; }
-        .match-autocomplete { background: #6366f120; color: #a78bfa; }
-        .match-related { background: #10b98120; color: #10b981; }
-        .match-title { background: #60a5fa20; color: #60a5fa; }
-        .match-suggestion { background: #f472b620; color: #f472b6; }
-        .match-attribute { background: #14b8a620; color: #2dd4bf; }
-        .match-google { background: #ea433520; color: #f87171; }
-        .match-bing { background: #0078d420; color: #38bdf8; }
-        .match-youtube { background: #ff000020; color: #f87171; }
+        .match-seed { background: rgba(245, 158, 11, 0.1); color: #d97706; }
+        .match-autocomplete { background: rgba(99, 102, 241, 0.1); color: #4f46e5; }
+        .match-related { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+        .match-title { background: rgba(96, 165, 250, 0.1); color: #2563eb; }
+        .match-suggestion { background: rgba(244, 114, 182, 0.1); color: #db2777; }
+        .match-attribute { background: rgba(20, 184, 166, 0.1); color: #0d9488; }
+        .match-google { background: rgba(234, 67, 53, 0.1); color: #dc2626; }
+        .match-bing { background: rgba(0, 120, 212, 0.1); color: #0284c7; }
+        .match-youtube { background: rgba(255, 0, 0, 0.1); color: #dc2626; }
         
         .table-scroll {
             max-height: 600px;
@@ -346,8 +356,9 @@
         
         .pagination a, .pagination span {
             padding: 8px 14px;
-            background: #374151;
-            color: #e5e7eb;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #475569;
             border-radius: 6px;
             text-decoration: none;
             font-size: 13px;
@@ -355,8 +366,10 @@
         
         .pagination a:hover, .pagination span.current {
             background: #f59e0b;
+            color: white;
+            border-color: #f59e0b;
         }
-
+ 
         .pagination span.disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -366,7 +379,7 @@
         .copy-btn {
             background: none;
             border: none;
-            color: #6b7280;
+            color: #94a3b8;
             cursor: pointer;
             font-size: 14px;
             padding: 4px;
@@ -377,7 +390,7 @@
         }
         
         .currency {
-            color: #6b7280;
+            color: #64748b;
             font-size: 11px;
         }
     </style>
@@ -390,16 +403,15 @@
         </div>
         <div class="nav-links">
             <a href="{{ route('dashboard') }}">Dashboard</a>
-            <a href="{{ route('cerebro.index') }}">Keyword Analyzer</a>
-            <a href="{{ route('magnet.index') }}">Keyword Magnet</a>
-            <a href="{{ route('logout') }}">Logout</a>
+            <a href="{{ route('cerebro.folders') }}">Folders</a>
+            <a href="/settings">Settings</a>
         </div>
     </nav>
     
     <div class="container">
         <!-- Breadcrumb -->
         <div class="breadcrumb">
-            <a href="{{ route('magnet.index') }}">Keyword Magnet</a>
+            <a href="{{ route('cerebro.folders') }}">Folders</a>
             <span>/</span>
             <span>{{ $analysis->seed_keyword }}</span>
         </div>
@@ -416,11 +428,8 @@
                 </p>
             </div>
             <div class="header-actions">
-                <a href="{{ route('magnet.export', $analysis->id) }}" class="btn btn-success">
-                    📥 Export CSV
-                </a>
-                <a href="{{ route('magnet.index') }}" class="btn btn-secondary">
-                    ← Back to List
+                <a href="{{ route('cerebro.folders') }}" class="btn btn-secondary">
+                    ← Back to Folders
                 </a>
             </div>
         </div>
@@ -460,10 +469,8 @@
             <span class="filter-label">Quick Filters:</span>
             <a href="{{ route('magnet.show', $analysis->id) }}" class="filter-btn {{ !request('quick_filter') ? 'active' : '' }}">All ({{ $analysis->total_keywords }})</a>
             <a href="{{ route('magnet.show', ['id' => $analysis->id, 'quick_filter' => 'high_volume']) }}" class="filter-btn {{ request('quick_filter') == 'high_volume' ? 'active' : '' }}">🔥 High Volume</a>
-            <a href="{{ route('magnet.show', ['id' => $analysis->id, 'quick_filter' => 'opportunity']) }}" class="filter-btn {{ request('quick_filter') == 'opportunity' ? 'active' : '' }}">💎 Opportunity</a>
             <a href="{{ route('magnet.show', ['id' => $analysis->id, 'quick_filter' => 'low_competition']) }}" class="filter-btn {{ request('quick_filter') == 'low_competition' ? 'active' : '' }}">✅ Low Competition</a>
             <a href="{{ route('magnet.show', ['id' => $analysis->id, 'quick_filter' => 'long_tail']) }}" class="filter-btn {{ request('quick_filter') == 'long_tail' ? 'active' : '' }}">📝 Long Tail</a>
-            <a href="{{ route('magnet.show', ['id' => $analysis->id, 'quick_filter' => 'easy_wins']) }}" class="filter-btn {{ request('quick_filter') == 'easy_wins' ? 'active' : '' }}">🎯 Easy Wins</a>
         </div>
         
         <!-- Advanced Filters (Helium 10 Style) -->
@@ -472,16 +479,16 @@
                 <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px;">
                     <span class="filter-label" style="font-size: 14px;">🔧 Advanced Filters</span>
                     <button type="button" onclick="toggleAdvancedFilters()" class="filter-btn" id="toggleFiltersBtn">
-                        {{ request()->hasAny(['volume_min', 'volume_max', 'iq_min', 'iq_max', 'words_min', 'words_max', 'title_density_max', 'competing_max', 'cpr_max', 'sales_min', 'exclude_phrase']) ? '▼ Hide' : '▶ Show' }}
+                        {{ request()->hasAny(['volume_min', 'volume_max', 'iq_min', 'iq_max', 'words_min', 'words_max', 'competing_max', 'cpr_max', 'sales_min', 'exclude_phrase']) ? '▼ Hide' : '▶ Show' }}
                     </button>
-                    @if(request()->hasAny(['volume_min', 'volume_max', 'iq_min', 'iq_max', 'words_min', 'words_max', 'title_density_max', 'competing_max', 'cpr_max', 'sales_min', 'include_phrase', 'exclude_phrase', 'match_type']))
+                    @if(request()->hasAny(['volume_min', 'volume_max', 'iq_min', 'iq_max', 'words_min', 'words_max', 'competing_max', 'cpr_max', 'sales_min', 'include_phrase', 'exclude_phrase']))
                     <a href="{{ route('magnet.show', $analysis->id) }}" class="filter-btn" style="background: #ef444420; color: #ef4444;">✕ Clear All</a>
                     @endif
                 </div>
                 
-                <div id="advancedFiltersPanel" style="display: {{ request()->hasAny(['volume_min', 'volume_max', 'iq_min', 'iq_max', 'words_min', 'words_max', 'title_density_max', 'competing_max', 'cpr_max', 'sales_min', 'exclude_phrase']) ? 'block' : 'none' }};">
+                <div id="advancedFiltersPanel" style="display: {{ request()->hasAny(['volume_min', 'volume_max', 'iq_min', 'iq_max', 'words_min', 'words_max', 'competing_max', 'cpr_max', 'sales_min', 'exclude_phrase']) ? 'block' : 'none' }};">
                     <!-- Row 1: Volume & IQ Score -->
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px;">
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px;">
                         <div>
                             <label class="filter-label" style="display: block; margin-bottom: 6px;">Search Volume</label>
                             <div style="display: flex; gap: 8px;">
@@ -502,10 +509,6 @@
                                 <input type="number" name="words_min" class="filter-input" style="width: 100%;" placeholder="Min" value="{{ request('words_min') }}">
                                 <input type="number" name="words_max" class="filter-input" style="width: 100%;" placeholder="Max" value="{{ request('words_max') }}">
                             </div>
-                        </div>
-                        <div>
-                            <label class="filter-label" style="display: block; margin-bottom: 6px;">Title Density (Max)</label>
-                            <input type="number" name="title_density_max" class="filter-input" style="width: 100%;" placeholder="e.g. 10" value="{{ request('title_density_max') }}">
                         </div>
                     </div>
                     
@@ -529,8 +532,8 @@
                         </div>
                     </div>
                     
-                    <!-- Row 3: Phrase Filters + Match Type -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 200px 150px; gap: 16px; margin-bottom: 16px;">
+                    <!-- Row 3: Phrase Filters -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 150px; gap: 16px; margin-bottom: 16px;">
                         <div>
                             <label class="filter-label" style="display: block; margin-bottom: 6px;">Include Phrase (comma-separated)</label>
                             <input type="text" name="include_phrase" class="filter-input" style="width: 100%;" placeholder="e.g. wireless, bluetooth" value="{{ request('include_phrase') }}">
@@ -538,17 +541,6 @@
                         <div>
                             <label class="filter-label" style="display: block; margin-bottom: 6px;">Exclude Phrase (comma-separated)</label>
                             <input type="text" name="exclude_phrase" class="filter-input" style="width: 100%;" placeholder="e.g. used, refurbished" value="{{ request('exclude_phrase') }}">
-                        </div>
-                        <div>
-                            <label class="filter-label" style="display: block; margin-bottom: 6px;">Match Type</label>
-                            <select name="match_type" class="filter-select" style="width: 100%;">
-                                <option value="all" {{ request('match_type') == 'all' || !request('match_type') ? 'selected' : '' }}>All Types</option>
-                                <option value="seed" {{ request('match_type') == 'seed' ? 'selected' : '' }}>🌱 Seed</option>
-                                <option value="autocomplete" {{ request('match_type') == 'autocomplete' ? 'selected' : '' }}>⌨️ Autocomplete</option>
-                                <option value="related" {{ request('match_type') == 'related' ? 'selected' : '' }}>🔗 Related</option>
-                                <option value="title" {{ request('match_type') == 'title' ? 'selected' : '' }}>📄 Title</option>
-                                <option value="attribute" {{ request('match_type') == 'attribute' ? 'selected' : '' }}>🏷️ Attribute</option>
-                            </select>
                         </div>
                         <div style="display: flex; align-items: flex-end;">
                             <button type="submit" class="btn btn-primary" style="width: 100%;">🔍 Apply Filters</button>
@@ -586,9 +578,7 @@
                             <th>Keyword</th>
                             <th><a href="{{ route('magnet.show', array_merge(['id' => $analysis->id], request()->except(['sort', 'dir']), ['sort' => 'search_volume', 'dir' => request('dir') == 'desc' ? 'asc' : 'desc'])) }}">Volume ↕</a></th>
                             <th><a href="{{ route('magnet.show', array_merge(['id' => $analysis->id], request()->except(['sort', 'dir']), ['sort' => 'magnet_iq_score', 'dir' => request('dir') == 'desc' ? 'asc' : 'desc'])) }}">IQ Score ↕</a></th>
-                            <th>Title Density</th>
-                            <th>Competition</th>
-                            <th>CPR</th>
+                            <th>Est. Daily Sales</th>
                             <th>Sales</th>
                             <th>Avg Price</th>
                             <th>Words</th>
@@ -607,8 +597,6 @@
                             </td>
                             <td style="color: #60a5fa; font-weight: 600;">{{ number_format($kw->search_volume) }}</td>
                             <td><span class="iq-score {{ $iqClass }}">{{ number_format($kw->magnet_iq_score, 1) }}</span></td>
-                            <td style="color: #9ca3af;">{{ $kw->title_density }}/48</td>
-                            <td style="color: #f472b6;">{{ number_format($kw->competing_products) }}</td>
                             <td style="color: #f59e0b;">{{ $kw->cpr_8day }}/day</td>
                             <td style="color: #10b981;">{{ number_format($kw->keyword_sales) }}</td>
                             <td>

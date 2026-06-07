@@ -13,11 +13,11 @@
             --secondary: #0ea5e9;
             --success: #10b981;
             --danger: #ef4444;
-            --dark: #0f172a;
-            --dark-light: #1e293b;
+            --dark: #f8fafc;
+            --dark-light: #ffffff;
             --gray: #64748b;
-            --gray-light: #94a3b8;
-            --white: #ffffff;
+            --gray-light: #475569;
+            --white: #0f172a;
             --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
         }
 
@@ -71,10 +71,10 @@
 
         .auth-card {
             background: var(--dark-light);
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(0,0,0,0.08);
             border-radius: 24px;
             padding: 2.5rem;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
         }
 
         .auth-header {
@@ -131,7 +131,7 @@
             width: 100%;
             padding: 0.875rem 1rem;
             background: var(--dark);
-            border: 2px solid rgba(255,255,255,0.1);
+            border: 2px solid rgba(0,0,0,0.08);
             border-radius: 12px;
             color: var(--white);
             font-size: 1rem;
@@ -197,7 +197,7 @@
 
         .btn-primary {
             background: var(--gradient);
-            color: var(--white);
+            color: #ffffff;
             box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
         }
 
@@ -219,7 +219,7 @@
             content: '';
             flex: 1;
             height: 1px;
-            background: rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.08);
         }
 
         .divider span {
@@ -235,7 +235,7 @@
             flex: 1;
             padding: 0.875rem;
             background: var(--dark);
-            border: 2px solid rgba(255,255,255,0.1);
+            border: 2px solid rgba(0,0,0,0.08);
             border-radius: 12px;
             color: var(--white);
             font-size: 1.25rem;
@@ -276,13 +276,13 @@
         .alert-error {
             background: rgba(239, 68, 68, 0.1);
             border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #fca5a5;
+            color: #b91c1c;
         }
 
         .alert-success {
             background: rgba(16, 185, 129, 0.1);
             border: 1px solid rgba(16, 185, 129, 0.3);
-            color: #6ee7b7;
+            color: #047857;
         }
 
         .back-link {

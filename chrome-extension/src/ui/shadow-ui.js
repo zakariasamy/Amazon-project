@@ -993,6 +993,7 @@ class ShadowUI {
       }
 
       // Display comprehensive results table (ALL keywords)
+      this.keywordResults = results;
       const allKeywords = results.allKeywords || results.keywords || [];
       const totalKw = allKeywords.length;
       const avgVol = totalKw > 0 ? Math.round(allKeywords.reduce((s, k) => s + (k.estimated_volume || 0), 0) / totalKw) : 0;
@@ -1118,13 +1119,23 @@ class ShadowUI {
     const maxAds = filters.maxAds !== undefined ? filters.maxAds : Infinity;
     const maxKd = filters.maxKd || 100;
     const search = (filters.search || '').toLowerCase().trim();
+    const testMode = this.keywordResults?.test_mode_enabled === true;
 
-    const fmtVol = v => { if (!v) return '—'; if (v >= 1000000) return (v/1000000).toFixed(1)+'M'; if (v >= 1000) return (v/1000).toFixed(1)+'K'; return v.toLocaleString(); };
+    const fmtVol = v => {
+      if (!v) return '—';
+      const suffix = testMode ? '<span style="font-size:8px;color:#a78bfa;margin-left:2px;vertical-align:middle;" title="Calculated from real-time logic (no cache)">🧪</span>' : '';
+      let formattedVal = v;
+      if (v >= 1000000) formattedVal = (v/1000000).toFixed(1)+'M';
+      else if (v >= 1000) formattedVal = (v/1000).toFixed(1)+'K';
+      else formattedVal = v.toLocaleString();
+      return `${formattedVal}${suffix}`;
+    };
     const fmtKd = score => {
       if (score == null || score === 0) return '<span style="color:#6b7280;">—</span>';
       const color = score>=70?'#f87171':score>=50?'#fb923c':score>=30?'#facc15':'#4ade80';
       const label = score>=70?'Hard':score>=50?'Med':score>=30?'Fair':'Easy';
-      return `<span style="color:${color};font-weight:700;">${score}</span><span style="color:#6b7280;font-size:10px;margin-left:2px;">${label}</span>`;
+      const hint = testMode ? '<span style="font-size:8px;color:#a78bfa;margin-left:2px;vertical-align:middle;" title="Calculated from real-time logic (no cache)">🧪</span>' : '';
+      return `<span style="color:${color};font-weight:700;">${score}</span><span style="color:#6b7280;font-size:10px;margin-left:2px;">${label}</span>${hint}`;
     };
     const fmtSales = v => { if (!v) return '—'; if (v >= 1000) return (v/1000).toFixed(1)+'K'; return v.toLocaleString(); };
 
