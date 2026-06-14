@@ -51,6 +51,8 @@ class ShadowUI {
         'copy keywords': 'نسخ الكلمات المفتاحية',
         'copy': 'نسخ',
         'export': 'تصدير',
+        'save to list': 'حفظ في القائمة',
+        'save asin': 'حفظ في القائمة',
         'full calculator': 'الحاسبة الكاملة',
         'your cogs:': 'تكلفة البضاعة (COGS):',
         'profit/unit': 'الربح/الوحدة',
@@ -237,6 +239,7 @@ class ShadowUI {
             <div class="analyzer-panel-footer">
                 <button class="analyzer-btn analyzer-btn-secondary" id="analyzer-copy">📋 Copy</button>
                 <button class="analyzer-btn analyzer-btn-primary" id="analyzer-export">📊 Export</button>
+                <button class="analyzer-btn" id="analyzer-save-asin" style="background:#6366f1;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">📁 Save to List</button>
             </div>
         `;
       container.appendChild(wrapper);
@@ -245,6 +248,52 @@ class ShadowUI {
       // Attach listeners
       wrapper.querySelector('#analyzer-copy').addEventListener('click', () => this.copyToClipboard(analysis));
       wrapper.querySelector('#analyzer-export').addEventListener('click', () => this.exportReport(analysis));
+
+      // Save ASIN to List
+      wrapper.querySelector('#analyzer-save-asin')?.addEventListener('click', async () => {
+          const asin = analysis.asin || '';
+          if (!asin) return;
+
+          const itemData = {
+              asin:         asin,
+              title:        analysis.title || '',
+              price:        analysis.price || 0,
+              bsr:          analysis.bsr || 0,
+              rating:       analysis.rating || 0,
+              rating_count: analysis.rating_count || 0,
+              marketplace:  window.location.hostname,
+          };
+
+          let token = '';
+          try {
+              if (typeof chrome !== 'undefined' && chrome.storage) {
+                  const data = await chrome.storage.local.get(['authToken']);
+                  token = data.authToken || '';
+              }
+          } catch (e) {}
+
+          const baseUrl = window.API_CONFIG?.baseUrl || window.ApiClient?.baseUrl || 'http://127.0.0.1:8000';
+          const picker = new SaveToList({
+              listType: 'products',
+              items:    [itemData],
+              baseUrl,
+              token,
+              onSuccess: () => {
+                  const btn = wrapper.querySelector('#analyzer-save-asin');
+                  if (btn) {
+                      btn.textContent = this.isArabic() ? '✓ تم الحفظ!' : '✓ Saved!';
+                      setTimeout(() => {
+                          btn.textContent = this.isArabic() ? '📁 حفظ في القائمة' : '📁 Save to List';
+                      }, 2000);
+                  }
+                  // Notify the main toolbar button on the product page as well to update its state
+                  if (typeof updateSaveButtonState === 'function') {
+                      updateSaveButtonState();
+                  }
+              },
+          });
+          picker.open();
+      });
 
       // Init interactive elements
       this.panel = wrapper; // Set panel ref for interactions
@@ -353,12 +402,47 @@ class ShadowUI {
         <button class="analyzer-btn analyzer-btn-secondary" id="analyzer-copy">
           📋 Copy Keywords
         </button>
+        <button class="analyzer-btn" id="analyzer-save-keywords" style="background:#6366f1;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">
+          📁 Save to List
+        </button>
       </div>
     `;
 
     // Event listeners
     panel.querySelector('#analyzer-close').addEventListener('click', () => this.remove());
     panel.querySelector('#analyzer-copy').addEventListener('click', () => this.copyKeywordsToClipboard());
+
+    // Save Reverse ASIN keywords to list
+    panel.querySelector('#analyzer-save-keywords')?.addEventListener('click', async () => {
+        const items = Array.from(this.panel?.querySelectorAll('.keyword-item') || []).map(item => ({
+            keyword:       item.querySelector('.keyword-text')?.textContent?.trim() || '',
+            search_volume: parseInt(item.querySelector('.keyword-volume')?.textContent?.replace(/[^0-9]/g,'') || '0') || 0,
+            asin:          analysis.asin || '',
+        })).filter(r => r.keyword);
+
+        if (items.length === 0) { return; }
+
+        let token = '';
+        try {
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                const data = await chrome.storage.local.get(['authToken']);
+                token = data.authToken || '';
+            }
+        } catch (e) {}
+
+        const baseUrl = window.API_CONFIG?.baseUrl || window.ApiClient?.baseUrl || 'http://127.0.0.1:8000';
+        const picker = new SaveToList({
+            listType: 'reverse_asin',
+            items,
+            baseUrl,
+            token,
+            onSuccess: (count) => {
+                const btn = panel.querySelector('#analyzer-save-keywords');
+                if (btn) { btn.textContent = `✓ ${count} saved!`; setTimeout(() => { btn.innerHTML = '📁 Save to List'; }, 2000); }
+            },
+        });
+        picker.open();
+    });
 
     // Note: discoverKeywords is triggered automatically via display()
 
@@ -425,6 +509,9 @@ class ShadowUI {
         <button class="analyzer-btn analyzer-btn-primary" id="analyzer-export">
           📊 Export
         </button>
+        <button class="analyzer-btn" id="analyzer-save-asin" style="background:#6366f1;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">
+          📁 Save to List
+        </button>
       </div>
       
       <!-- Restore Toggle (Hidden by default) -->
@@ -440,6 +527,52 @@ class ShadowUI {
     panel.querySelector('#analyzer-copy').addEventListener('click', () => this.copyToClipboard(analysis));
     panel.querySelector('#analyzer-export').addEventListener('click', () => this.exportReport(analysis));
     panel.querySelector('#analyzer-keywords').addEventListener('click', () => this.discoverKeywords(analysis));
+
+    // Save ASIN to List
+    panel.querySelector('#analyzer-save-asin')?.addEventListener('click', async () => {
+        const asin = analysis.asin || '';
+        if (!asin) return;
+
+        const itemData = {
+            asin:         asin,
+            title:        analysis.title || '',
+            price:        analysis.price || 0,
+            bsr:          analysis.bsr || 0,
+            rating:       analysis.rating || 0,
+            rating_count: analysis.rating_count || 0,
+            marketplace:  window.location.hostname,
+        };
+
+        let token = '';
+        try {
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                const data = await chrome.storage.local.get(['authToken']);
+                token = data.authToken || '';
+            }
+        } catch (e) {}
+
+        const baseUrl = window.API_CONFIG?.baseUrl || window.ApiClient?.baseUrl || 'http://127.0.0.1:8000';
+        const picker = new SaveToList({
+            listType: 'products',
+            items:    [itemData],
+            baseUrl,
+            token,
+            onSuccess: () => {
+                const btn = panel.querySelector('#analyzer-save-asin');
+                if (btn) {
+                    btn.textContent = this.isArabic() ? '✓ تم الحفظ!' : '✓ Saved!';
+                    setTimeout(() => {
+                        btn.textContent = this.isArabic() ? '📁 حفظ في القائمة' : '📁 Save to List';
+                    }, 2000);
+                }
+                // Notify the main toolbar button on the product page as well to update its state
+                if (typeof updateSaveButtonState === 'function') {
+                    updateSaveButtonState();
+                }
+            },
+        });
+        picker.open();
+    });
 
     // Recalculate profit listener (dynamic updates for COGS, shipping, storage, ads, referral, and VAT checkbox in floating panel)
     const recalculateProfit = () => {
@@ -642,6 +775,8 @@ class ShadowUI {
     return `
       <div class="analyzer-section" style="direction: ${this.isArabic() ? 'rtl' : 'ltr'}; text-align: ${this.isArabic() ? 'right' : 'left'};">
         <h3 class="analyzer-section-title">💰 ${this.isArabic() ? 'تحليل الأرباح' : 'Profit Analysis'} <span class="estimate-badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">⚠️ ${this.isArabic() ? 'تقديري' : 'Est.'}</span></h3>
+
+        <div id="fba-offline-banner" style="display: none; margin-bottom: 14px;"></div>
 
         
         <!-- Fulfillment Mode Switcher -->
@@ -1038,7 +1173,7 @@ class ShadowUI {
               <option value="70">Hard (≤70)</option>
             </select>
             <input type="text" id="filter-keyword-search" placeholder="Search keyword..." style="flex:1;min-width:100px;padding:5px 8px;border-radius:5px;border:1px solid #374151;background:#0f172a;color:#e5e7eb;font-size:11px;">
-            <button id="ra-export-btn" style="background:#10b981;border:none;color:#fff;padding:5px 12px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600;">📥 Export</button>
+            <button id="ra-save-list-btn" style="background:#6366f1;border:none;color:#fff;padding:5px 12px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px;">📁 Save to List</button>
           </div>
 
           <!-- Table -->
@@ -1064,16 +1199,50 @@ class ShadowUI {
         </div>
       `;
 
-      // Export CSV
-      resultsDiv.querySelector('#ra-export-btn')?.addEventListener('click', () => {
-        const rows = [['Keyword','Rank','Volume','Difficulty','Sales','Ads','Avg Price']];
-        allKeywords.forEach(k => rows.push([
-          k.keyword, k.position||'', k.estimated_volume||0, k.difficulty_score||0,
-          k.total_sales||0, k.sponsored_count||0, k.avg_price||0
-        ]));
-        const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-        const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-        a.download = `reverse_asin_${analysis.asin}_${Date.now()}.csv`; a.click();
+      // Save to List
+      resultsDiv.querySelector('#ra-save-list-btn')?.addEventListener('click', async () => {
+        if (!allKeywords || allKeywords.length === 0) {
+          alert('No keywords available to save.');
+          return;
+        }
+
+        let token = '';
+        try {
+          if (typeof chrome !== 'undefined' && chrome.storage) {
+            const data = await chrome.storage.local.get(['authToken']);
+            token = data.authToken || '';
+          }
+        } catch (e) {}
+
+        const itemsToSave = allKeywords.map(kw => ({
+          keyword: kw.keyword,
+          position: kw.position || 0,
+          search_volume: kw.estimated_volume || 0,
+          difficulty_score: kw.difficulty_score || 0,
+          total_sales: kw.total_sales || 0,
+          sponsored_count: kw.sponsored_count || 0,
+          avg_price: kw.avg_price || 0,
+          asin: analysis.asin,
+          marketplace: analysis.marketplace || window.location.hostname
+        }));
+
+        const baseUrl = window.API_CONFIG?.baseUrl || window.ApiClient?.baseUrl || 'http://127.0.0.1:8000';
+        const picker = new SaveToList({
+          listType: 'reverse_asin',
+          items: itemsToSave,
+          baseUrl,
+          token,
+          onSuccess: (count) => {
+            const btn = resultsDiv.querySelector('#ra-save-list-btn');
+            if (btn) {
+              btn.textContent = '✓ Saved!';
+              setTimeout(() => {
+                btn.textContent = '📁 Save to List';
+              }, 2000);
+            }
+          }
+        });
+        picker.open();
       });
 
       // Keyword search filter
@@ -1338,21 +1507,159 @@ class ShadowUI {
     }
   }
 
-  updateProfitMetrics(cogs, shipping, storage, ads, referral, applyVat, analysis, panel) {
+  showOfflineFBABanner(panel) {
+    const banner = panel.querySelector('#fba-offline-banner');
+    if (!banner) return;
+
+    const isArabic = this.isArabic();
+    banner.innerHTML = `
+      <div style="
+        padding: 12px 16px;
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid #ef4444;
+        border-radius: 8px;
+        color: #fca5a5;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1.4;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      ">
+        <span>⚠️</span>
+        <span>${isArabic ? 'الخادم الخلفي غير متصل. يرجى تشغيل الخادم الخلفي لتنشيط حسابات الأرباح.' : 'Backend server is offline. Please start the backend server to activate profit calculations.'}</span>
+      </div>
+    `;
+    banner.style.display = 'block';
+
+    // Disable profit inputs
+    ['#custom-cogs-input', '#custom-shipping-input', '#custom-storage-input', '#custom-ads-input', '#custom-referral-input', '#custom-vat-checkbox'].forEach(selector => {
+      const el = panel.querySelector(selector);
+      if (el) {
+        el.disabled = true;
+        el.style.opacity = '0.5';
+        el.style.cursor = 'not-allowed';
+      }
+    });
+
+    // Disable full calculator button
+    const calcBtn = panel.querySelector('#open-detailed-calc-btn');
+    if (calcBtn) {
+      calcBtn.disabled = true;
+      calcBtn.style.opacity = '0.5';
+      calcBtn.style.cursor = 'not-allowed';
+      calcBtn.style.pointerEvents = 'none';
+    }
+  }
+
+  hideOfflineFBABanner(panel) {
+    const banner = panel.querySelector('#fba-offline-banner');
+    if (banner) {
+      banner.style.display = 'none';
+      banner.innerHTML = '';
+    }
+
+    // Enable profit inputs
+    ['#custom-cogs-input', '#custom-shipping-input', '#custom-storage-input', '#custom-ads-input', '#custom-referral-input', '#custom-vat-checkbox'].forEach(selector => {
+      const el = panel.querySelector(selector);
+      if (el) {
+        el.disabled = false;
+        el.style.opacity = '1';
+        el.style.cursor = 'auto';
+      }
+    });
+
+    // Enable full calculator button
+    const calcBtn = panel.querySelector('#open-detailed-calc-btn');
+    if (calcBtn) {
+      calcBtn.disabled = false;
+      calcBtn.style.opacity = '1';
+      calcBtn.style.cursor = 'pointer';
+      calcBtn.style.pointerEvents = 'auto';
+    }
+  }
+
+  async updateProfitMetrics(cogs, shipping, storage, ads, referral, applyVat, analysis, panel) {
+    const isOnline = await window.ApiClient.checkHealth();
+    if (!isOnline) {
+      this.showOfflineFBABanner(panel);
+      return;
+    } else {
+      this.hideOfflineFBABanner(panel);
+    }
+
     const price = parseFloat(analysis.price) || 0;
     const currency = analysis.currency || 'USD';
+    const activeTab = panel.querySelector('.fulfillment-tab.active');
+    const mode = activeTab ? activeTab.dataset.mode : 'fba';
+    const isFba = mode === 'fba';
 
-    // 14% VAT forced (if applyVat checkbox is checked)
-    const vat = applyVat ? price * 0.14 : 0;
+    const productCost = cogs;
+    const shippingCost = isFba ? shipping : (shipping + storage);
+    const cpcCost = ads;
+    const taxPercent = applyVat ? 14 : 0;
+    const monthlySales = (analysis.sales && analysis.sales.monthly) || 30;
+    const weightKg = (analysis.weight && analysis.weight.kg) || 0.5;
+    const category = analysis.category || 'default';
+    const marketplace = window.location.hostname.includes('.eg') ? 'amazon.eg' : 'amazon.com';
 
-    // Per Unit = Price - VAT - COGS - Shipping - Storage - Referral - Ads
-    const perUnit = price - vat - cogs - shipping - storage - referral - ads;
+    let perUnit = 0;
+    let margin = 0;
+    let roi = 0;
+    let monthly = 0;
+    let annual = 0;
+    let updatedFees = 0;
 
-    const margin = price > 0 ? (perUnit / price) * 100 : 0;
-    const totalCost = cogs + vat + shipping + storage + referral + ads;
-    const roi = totalCost > 0 ? (perUnit / totalCost) * 100 : 0;
-    const monthly = perUnit * (analysis.sales.monthly || 0);
-    const annual = monthly * 12;
+    try {
+      const apiBase = window.API_CONFIG?.baseUrl || window.ApiClient?.baseUrl || 'http://127.0.0.1:8000';
+      const response = await fetch(`${apiBase}/api/fees/calculate-profit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          marketplace,
+          selling_price: price,
+          product_cost: productCost,
+          shipping_cost: shippingCost,
+          cpc_cost: cpcCost,
+          tax_percent: taxPercent,
+          monthly_sales: monthlySales,
+          weight_kg: weightKg,
+          category: category,
+          is_fba: isFba
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          perUnit = data.profit.per_unit;
+          margin = data.profit.margin_percent;
+          roi = data.profit.roi_percent;
+          monthly = data.profit.monthly;
+          annual = data.profit.annual;
+          if (isFba) {
+            updatedFees = data.fees.amazon_total + shipping;
+          } else {
+            updatedFees = data.fees.referral_fee + shipping + storage;
+          }
+        } else {
+          throw new Error(data.message || 'Profit calculation failed on backend');
+        }
+      } else {
+        throw new Error(`Calculation service returned status ${response.status}`);
+      }
+    } catch (err) {
+      console.error('[ShadowUI] Backend profit calculation failed:', err);
+      perUnit = 0;
+      margin = 0;
+      roi = 0;
+      monthly = 0;
+      annual = 0;
+      updatedFees = 0;
+    }
 
     // Determine class based on new margin
     const marginClass = this.getProfitClass(margin);
@@ -1368,8 +1675,6 @@ class ShadowUI {
         }
       }
     };
-
-    const updatedFees = shipping + storage + referral;
 
     updateEl('#profit-per-unit', `${currency} ${perUnit.toFixed(2)}`, marginClass);
     updateEl('#profit-margin', `${margin.toFixed(1)}% margin`);

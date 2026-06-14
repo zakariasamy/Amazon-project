@@ -178,6 +178,10 @@ class ConstantsController extends Controller
             'delay_between_requests' => 300,
             'attribute_variation_scope' => 'seed', // Options: 'seed', 'top_n', 'all'
             'attribute_variation_limit' => 10, // Used when scope is 'top_n'
+            'magnet_fetch_bsr_enabled' => true,
+            'magnet_bsr_products_limit' => 20,
+            'magnet_bsr_parallel_requests' => 3,
+            'magnet_bsr_delay_ms' => 500,
         ];
 
         return response()->json([

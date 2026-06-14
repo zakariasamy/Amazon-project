@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\ReverseAsinController;
 use App\Http\Controllers\Api\CalibrationController;
 use App\Http\Controllers\Api\ProductAnalysisController;
 use App\Http\Controllers\Api\ProductCacheController;
+use App\Http\Controllers\Api\DashboardApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -127,4 +128,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/calibration/status', [CalibrationController::class, 'status']);
     Route::post('/calibration/trigger', [CalibrationController::class, 'trigger']);
     Route::post('/calibration/run-full', [CalibrationController::class, 'runFull']);
+
+    // ─── Dashboard Folders & Lists (for Chrome Extension) ────────────────────
+    Route::get('/dashboard/folders',                  [DashboardApiController::class, 'folders']);
+    Route::get('/dashboard/folders/{id}/lists',       [DashboardApiController::class, 'listsInFolder']);
+    Route::post('/dashboard/lists',                   [DashboardApiController::class, 'createList']);
+    Route::post('/dashboard/lists/{id}/items',        [DashboardApiController::class, 'saveItems']);
+    Route::patch('/dashboard/lists/{id}',             [DashboardApiController::class, 'updateList']);
+    Route::get('/dashboard/items/check/{asin}',       [DashboardApiController::class, 'checkItem']);
+    Route::delete('/dashboard/lists/{listId}/items/{itemId}', [DashboardApiController::class, 'destroyItem']);
 });

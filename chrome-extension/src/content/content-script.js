@@ -56,7 +56,9 @@ function t(key) {
         'ROI': 'عائد الاستثمار (ROI)',
         'Monthly Profit': 'الربح الشهري',
         'Adjust inputs above to see live profit calculations': 'قم بتعديل المدخلات أعلاه لرؤية حسابات الأرباح المباشرة',
-        'Close Calculator': 'إغلاق الحاسبة'
+        'Close Calculator': 'إغلاق الحاسبة',
+        'Save to List': 'حفظ في القائمة',
+        'Please login to save results': 'الرجاء تسجيل الدخول لحفظ النتائج'
     };
 
     return translations[key] || key;
@@ -89,6 +91,14 @@ if (isSearchPage()) {
 async function initializeAnalyzer() {
     console.log('Initializing analyzer...');
     
+    const isOnline = await apiClient.checkHealth();
+    if (!isOnline) {
+        console.warn('Backend server is offline. Disabling analyzer features.');
+        injectAnalyzerButton({});
+        showServerOfflineAlert();
+        return;
+    }
+    
     let settings = {};
     try {
         const response = await fetch(`http://127.0.0.1:8000/api/settings?_t=${Date.now()}`);
@@ -101,6 +111,50 @@ async function initializeAnalyzer() {
     }
     
     injectAnalyzerButton(settings);
+}
+
+function showServerOfflineAlert() {
+    const resultDiv = document.getElementById('sv-product-result');
+    if (!resultDiv) return;
+
+    const isArabic = isPageArabic();
+    const alertTitle = isArabic ? '⚠️ الخادم الخلفي غير متصل' : '⚠️ Backend Server Offline';
+    const alertMsg = isArabic 
+        ? 'الخادم الخلفي غير متصل بالإنترنت. يرجى تشغيل خادم Laravel الخلفي لتنشيط أدوات التحليل.' 
+        : 'The backend server is offline. Please start the Laravel backend server to activate the analyzer tools.';
+
+    resultDiv.innerHTML = `
+        <div style="
+            padding: 28px; 
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%); 
+            backdrop-filter: blur(12px);
+            border-radius: 16px; 
+            border: 1px solid #dc3545; 
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        ">
+            <div style="font-size: 36px; filter: drop-shadow(0 0 10px rgba(220, 53, 69, 0.4));">⚠️</div>
+            <div style="font-weight: 800; font-size: 18px; color: #f8fafc; letter-spacing: 0.5px;">${alertTitle}</div>
+            <div style="font-size: 13px; color: #cbd5e1; line-height: 1.6; max-width: 480px;">${alertMsg}</div>
+        </div>
+    `;
+    resultDiv.style.display = 'block';
+    
+    // Disable analyzer buttons
+    ['sv-btn-analyze', 'sv-btn-reverse', 'sv-btn-calculator', 'sv-btn-save-list'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+            btn.style.pointerEvents = 'none';
+        }
+    });
 }
 
 function checkAuthAndExecute(callback) {
@@ -309,6 +363,27 @@ function injectAnalyzerButton(settings = {}) {
                         <span>💰</span> ${t('FBA Calculator')}
                     </button>
                     ` : ''}
+                    <button id="sv-btn-save-list" style="
+                        background: linear-gradient(135deg, #6366f1, #4f46e5); 
+                        color: white; 
+                        border: none; 
+                        padding: 8px 18px; 
+                        border-radius: 12px; 
+                        font-size: 13px; 
+                        font-weight: 700; 
+                        cursor: pointer; 
+                        display: flex; 
+                        align-items: center; 
+                        gap: 8px; 
+                        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+                        transition: all 0.2s ease-in-out;
+                        white-space: nowrap;
+                        flex-shrink: 0;
+                        min-width: max-content;
+                        transform: scale(1);
+                        filter: none;">
+                        <span>📁</span> ${t('Save to List')}
+                    </button>
                 </div>
             </div>
             
@@ -358,6 +433,14 @@ function injectAnalyzerButton(settings = {}) {
             checkAuthAndExecute(() => openFBACalculator());
         });
     }
+
+    setupButtonEffects('sv-btn-save-list');
+    document.getElementById('sv-btn-save-list').addEventListener('click', () => {
+        checkAuthAndExecute(() => saveCurrentProductToList());
+    });
+
+    // Asynchronously update save button state based on whether it is already saved
+    updateSaveButtonState();
 }
 
 function injectFloatingButtons(isAnalyzeProductEnabled = true) {
@@ -377,6 +460,14 @@ function injectFloatingButtons(isAnalyzeProductEnabled = true) {
 
 async function analyzeCurrentProduct(mode = 'full') {
     console.log(`Starting product analysis in ${mode} mode...`);
+
+    const isOnline = await apiClient.checkHealth();
+    if (!isOnline) {
+        alert(isPageArabic() 
+            ? '⚠️ الخادم الخلفي غير متصل. يرجى تشغيل الخادم الخلفي لتنشيط الأداة.' 
+            : '⚠️ Backend server is offline. Please start the backend server to activate this tool.');
+        return;
+    }
 
     // Show loading state
     const loadingDiv = document.createElement('div');
@@ -527,16 +618,11 @@ async function analyzeCurrentProduct(mode = 'full') {
                         calculatedBy: 'backend'
                     };
                 } else {
-                    console.warn('Backend API failed, falling back to local calculation');
-                    throw new Error('Backend unavailable');
+                    throw new Error(`API error: ${apiResponse.status}`);
                 }
             } catch (apiError) {
-                console.warn('API error, using local calculation:', apiError.message);
-
-                // Fallback to local calculation
-                const engine = new IntelligenceEngine(marketplace);
-                analysis = engine.analyze(productData);
-                analysis.calculatedBy = 'local';
+                console.error('API request failed:', apiError);
+                throw new Error('Analysis failed because the backend server is offline or returned an error.');
             }
         }
 
@@ -590,6 +676,14 @@ function displayResults(analysis, mode = 'full') {
 
 async function openFBACalculator() {
     console.log('Opening FBA Calculator...');
+
+    const isOnline = await apiClient.checkHealth();
+    if (!isOnline) {
+        alert(isPageArabic() 
+            ? '⚠️ الخادم الخلفي غير متصل. يرجى تشغيل الخادم الخلفي لتنشيط الأداة.' 
+            : '⚠️ Backend server is offline. Please start the backend server to activate this tool.');
+        return;
+    }
 
     const resultContainer = document.getElementById('sv-product-result');
     if (!resultContainer) {
@@ -646,12 +740,12 @@ async function openFBACalculator() {
                 fulfillmentFee = data.fees?.fulfillment || 0;
                 referralFee = data.fees?.referral || 0;
                 estimatedSales = data.sales?.monthly || 30;
+            } else {
+                throw new Error(`HTTP error ${response.status}`);
             }
         } catch (e) {
-            console.warn('Could not fetch fees from backend:', e.message);
-            const price = parseFloat(productData.price) || 100;
-            referralFee = price * 0.15;
-            fulfillmentFee = isEgypt ? 25 : 3.5;
+            console.error('Could not fetch fees from backend:', e.message);
+            throw new Error(isArabic ? 'فشل تحميل الرسوم من الخادم الخلفي.' : 'Could not load fees from backend server.');
         }
 
         const price = parseFloat(productData.price) || 0;
@@ -871,28 +965,16 @@ async function openFBACalculator() {
                     throw new Error('API failed');
                 }
             } catch (e) {
-                // Fallback to local calculation if API fails
-                console.warn('Using local calculation fallback:', e.message);
-
-                const refFee = sellingPrice * 0.15;
-                document.getElementById('calc-referral-fee').textContent = `${refFee.toFixed(2)} ${calcData.currency}`;
-
-                const totalCosts = productCost + shippingCost + cpcCost + calcData.fulfillmentFee + refFee;
-                const taxAmount = (sellingPrice * taxPercent) / 100;
-                const netProfit = sellingPrice - totalCosts - taxAmount;
-                const netMargin = sellingPrice > 0 ? (netProfit / sellingPrice) * 100 : 0;
-                const investment = productCost + shippingCost + cpcCost;
-                const roi = investment > 0 ? (netProfit / investment) * 100 : 0;
-                const monthlyProfit = netProfit * monthlySales;
-
-                document.getElementById('calc-net-profit').textContent = `${netProfit.toFixed(2)} ${calcData.currency}`;
-                document.getElementById('calc-net-profit').style.color = netProfit >= 0 ? '#34d399' : '#dc3545';
-                document.getElementById('calc-net-margin').textContent = `${netMargin.toFixed(1)}%`;
-                document.getElementById('calc-net-margin').style.color = netMargin >= 20 ? '#34d399' : netMargin >= 10 ? '#ffc107' : '#dc3545';
-                document.getElementById('calc-roi').textContent = `${roi.toFixed(0)}%`;
-                document.getElementById('calc-roi').style.color = roi >= 50 ? '#34d399' : roi >= 25 ? '#ffc107' : '#dc3545';
-                document.getElementById('calc-monthly-profit').textContent = `${monthlyProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${calcData.currency}`;
-                document.getElementById('calc-monthly-profit').style.color = monthlyProfit >= 0 ? '#febd69' : '#dc3545';
+                console.error('FBA recalculation error:', e);
+                // Set profit metrics to indicate error/offline
+                document.getElementById('calc-net-profit').textContent = 'Error';
+                document.getElementById('calc-net-profit').style.color = '#dc3545';
+                document.getElementById('calc-net-margin').textContent = 'Offline';
+                document.getElementById('calc-net-margin').style.color = '#dc3545';
+                document.getElementById('calc-roi').textContent = 'Offline';
+                document.getElementById('calc-roi').style.color = '#dc3545';
+                document.getElementById('calc-monthly-profit').textContent = 'Offline';
+                document.getElementById('calc-monthly-profit').style.color = '#dc3545';
             }
         };
 
@@ -998,6 +1080,21 @@ function showSearchAuthAlert() {
 async function initializeSearchAnalyzer() {
     console.log('Initializing search analyzer...');
     
+    const isOnline = await apiClient.checkHealth();
+    if (!isOnline) {
+        console.warn('Backend server is offline. Disabling search analyzer features.');
+        injectSearchAnalyzerButton({});
+        showSearchOfflineBanner();
+        
+        // Initialize Cerebro UI for multi-ASIN selection (will handle offline check internally)
+        if (typeof CerebroUI !== 'undefined') {
+            const cerebroUI = new CerebroUI();
+            cerebroUI.initOnSearchPage({});
+            window.cerebroUI = cerebroUI;
+        }
+        return;
+    }
+    
     let settings = {};
     try {
         const response = await fetch(`http://127.0.0.1:8000/api/settings?_t=${Date.now()}`);
@@ -1017,6 +1114,44 @@ async function initializeSearchAnalyzer() {
         cerebroUI.initOnSearchPage(settings);
         window.cerebroUI = cerebroUI; // Make accessible globally
         console.log('Cerebro UI initialized for ASIN selection');
+    }
+}
+
+function showSearchOfflineBanner() {
+    // Disable buttons
+    ['market-analysis-btn', 'keyword-magnet-btn'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+            btn.style.pointerEvents = 'none';
+        }
+    });
+
+    const isArabic = isPageArabic();
+    const banner = document.createElement('div');
+    banner.id = 'sv-search-offline-banner';
+    banner.style.cssText = `
+        width: 100%;
+        background: rgba(220, 53, 69, 0.15);
+        border: 1px solid #dc3545;
+        border-radius: 8px;
+        padding: 12px 20px;
+        margin: 16px 0 24px 0;
+        font-family: 'Inter', sans-serif;
+        color: #f8fafc;
+        font-size: 13px;
+        font-weight: 600;
+        text-align: center;
+    `;
+    banner.textContent = isArabic
+        ? '⚠️ الخادم الخلفي غير متصل بالإنترنت. يرجى تشغيل خادم Laravel الخلفي لتنشيط أدوات التحليل.'
+        : '⚠️ The backend server is offline. Please start the Laravel backend server to activate the analyzer tools.';
+
+    const container = document.getElementById('search-volume-btn-container');
+    if (container) {
+        container.insertAdjacentElement('afterend', banner);
     }
 }
 
@@ -1203,6 +1338,14 @@ function injectSearchAnalyzerButton(settings = {}) {
 
 async function analyzeSearchPage() {
     console.log('Starting search page analysis...');
+
+    const isOnline = await apiClient.checkHealth();
+    if (!isOnline) {
+        alert(isPageArabic() 
+            ? '⚠️ الخادم الخلفي غير متصل. يرجى تشغيل الخادم الخلفي لتنشيط الأداة.' 
+            : '⚠️ Backend server is offline. Please start the backend server to activate this tool.');
+        return;
+    }
 
     // Show loading
     const loadingDiv = document.createElement('div');
@@ -1908,6 +2051,102 @@ function displaySearchVolumeResults(keyword, result, scrapedProducts = [], testM
             });
         });
     }
+}
+
+async function updateSaveButtonState() {
+    const btn = document.getElementById('sv-btn-save-list');
+    if (!btn) return;
+
+    try {
+        const scraper = new DataScraper(document);
+        const productData = scraper.extractProductData();
+        if (!productData.asin) return;
+
+        chrome.runtime.sendMessage({ action: 'getAuth' }, async (response) => {
+            if (chrome.runtime.lastError || !response || !response.token) {
+                return;
+            }
+
+            const token = response.token;
+            const baseUrl = window.API_CONFIG?.baseUrl || window.ApiClient?.baseUrl || 'http://127.0.0.1:8000';
+            try {
+                const res = await fetch(`${baseUrl}/api/dashboard/items/check/${productData.asin}?type=products`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.exists) {
+                        const isArabic = isPageArabic();
+                        btn.innerHTML = `<span>✓</span> ${isArabic ? 'تم الحفظ ▾' : 'Saved ▾'}`;
+                        btn.style.background = 'linear-gradient(135deg, rgb(16, 185, 129), rgb(5, 150, 105))';
+                        btn.style.boxShadow = 'rgba(16, 185, 129, 0.35) 0px 4px 12px';
+                    } else {
+                        const isArabic = isPageArabic();
+                        btn.innerHTML = `<span>📁</span> ${t('Save to List')}`;
+                        btn.style.background = 'linear-gradient(135deg, #6366f1, #4f46e5)';
+                        btn.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.35)';
+                    }
+                }
+            } catch (err) {
+                console.error('Error checking saved state:', err);
+            }
+        });
+    } catch (e) {
+        console.error('Error in updateSaveButtonState:', e);
+    }
+}
+
+async function saveCurrentProductToList() {
+    const isOnline = await apiClient.checkHealth();
+    if (!isOnline) {
+        alert(isPageArabic() 
+            ? '⚠️ الخادم الخلفي غير متصل. يرجى تشغيل الخادم الخلفي لتنشيط الأداة.' 
+            : '⚠️ Backend server is offline. Please start the backend server to activate this tool.');
+        return;
+    }
+
+    const scraper = new DataScraper(document);
+    const productData = scraper.extractProductData();
+    if (!productData.asin) {
+        alert(t('Could not detect product ASIN'));
+        return;
+    }
+
+    const itemData = {
+        asin:         productData.asin,
+        title:        productData.title || '',
+        price:        parseFloat(productData.price) || 0,
+        bsr:          parseInt(productData.bsr) || 0,
+        rating:       parseFloat(productData.rating) || 0,
+        rating_count: parseInt(productData.reviewCount) || 0,
+        marketplace:  window.location.hostname,
+    };
+
+    chrome.runtime.sendMessage({ action: 'getAuth' }, (response) => {
+        if (chrome.runtime.lastError) {
+            console.error('[Content] getAuth runtime error:', chrome.runtime.lastError);
+            alert('Authentication token error.');
+            return;
+        }
+        if (response && response.token) {
+            const baseUrl = window.API_CONFIG?.baseUrl || window.ApiClient?.baseUrl || 'http://127.0.0.1:8000';
+            const picker = new SaveToList({
+                listType: 'products',
+                items:    [itemData],
+                baseUrl,
+                token: response.token,
+                onSuccess: () => {
+                    updateSaveButtonState();
+                }
+            });
+            picker.open();
+        } else {
+            alert(t('Please login to save results'));
+        }
+    });
 }
 
 // Listen for URL changes (SPA navigation)

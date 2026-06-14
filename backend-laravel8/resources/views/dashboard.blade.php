@@ -297,7 +297,7 @@
         /* Quick Actions */
         .quick-actions {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 1rem;
         }
 
@@ -483,9 +483,9 @@
                     <span class="nav-item-icon">🏠</span>
                     Dashboard
                 </a>
-                <a href="/dashboard/cerebro/folders" class="nav-item">
+                <a href="/folders" class="nav-item">
                     <span class="nav-item-icon">📁</span>
-                    Keyword Folders
+                    My Folders
                 </a>
             </div>
 
@@ -571,10 +571,10 @@
                 <h2 class="card-title">Quick Actions</h2>
             </div>
             <div class="quick-actions">
-                <a href="/dashboard/cerebro/folders" class="quick-action">
+                <a href="/folders" class="quick-action">
                     <span class="quick-action-icon">📁</span>
-                    <span class="quick-action-title">Keyword Folders</span>
-                    <span class="quick-action-desc">Organize and manage your keyword lists</span>
+                    <span class="quick-action-title">My Folders</span>
+                    <span class="quick-action-desc">Organize saved keywords, products &amp; analyses</span>
                 </a>
                 <a href="/settings" class="quick-action">
                     <span class="quick-action-icon">⚙️</span>

@@ -185,6 +185,14 @@ class MagnetUI {
     async openInputPanel() {
         if (this.panel) return;
 
+        const isOnline = await window.ApiClient.checkHealth();
+        if (!isOnline) {
+            alert(this.isArabic()
+                ? '⚠️ الخادم الخلفي غير متصل. يرجى تشغيل الخادم الخلفي لتنشيط مغناطيس الكلمات المفتاحية.'
+                : '⚠️ Backend server is offline. Please start the backend server to activate Keyword Magnet.');
+            return;
+        }
+
         // Get current search term if on search page
         const urlParams = new URLSearchParams(window.location.search);
         const currentKeyword = urlParams.get('k') || '';
@@ -426,6 +434,14 @@ class MagnetUI {
 
         if (this.isAnalyzing) {
             this.showToast('Analysis already in progress', 'warning');
+            return;
+        }
+
+        const isOnline = await window.ApiClient.checkHealth();
+        if (!isOnline) {
+            this.showToast(this.isArabic()
+                ? '⚠️ الخادم الخلفي غير متصل. يرجى تشغيل الخادم الخلفي لتنشيط الأداة.'
+                : '⚠️ Backend server is offline. Please start the backend server to activate this tool.', 'error');
             return;
         }
 
@@ -685,7 +701,7 @@ class MagnetUI {
                 <button id="magnet-save-btn" style="
                     background: #3b82f6; border: none; color: white;
                     padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;
-                ">💾 Save to Dashboard</button>
+                ">💾 Save to List</button>
                 <a href="${this.getDashboardUrl()}" target="_blank" style="
                     background: #6366f1; border: none; color: white;
                     padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;
@@ -865,20 +881,67 @@ class MagnetUI {
             this.filterBySearch(e.target.value);
         });
 
-        // Save to Dashboard (manual trigger)
-        content.querySelector('#magnet-save-btn')?.addEventListener('click', async (e) => {
-            const btn = e.target;
-            const originalText = btn.textContent;
-            btn.disabled = true;
-            btn.textContent = 'Saving...';
-            try {
-                await this.saveToBackend(this.currentResults);
-            } catch (error) {
-                console.error(error);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = originalText;
+        // Save to List (opens folder/list picker)
+        content.querySelector('#magnet-save-btn')?.addEventListener('click', async () => {
+            if (!this.resultsData?.keywords?.length) {
+                this.showToast('No keywords to save.', 'warning');
+                return;
             }
+
+            // Determine which keywords are currently visible by reading the table rows
+            const tbody = content.querySelector('#magnet-results-tbody');
+            const visibleKeywordSet = new Set(
+                [...(tbody?.querySelectorAll('tr') || [])]
+                    .filter(tr => tr.style.display !== 'none')
+                    .map(tr => tr.querySelector('td span')?.textContent?.trim())
+                    .filter(Boolean)
+            );
+
+            // Build items directly from resultsData — no DOM scraping, full fidelity
+            const seedKeyword = this.currentResults?.seed_keyword || '';
+            const currency    = this.resultsData.currency || 'USD';
+
+            const itemsToSave = this.resultsData.keywords
+                .filter(kw => visibleKeywordSet.size === 0 || visibleKeywordSet.has(kw.keyword))
+                .map(kw => ({
+                    keyword:       kw.keyword,
+                    seed_keyword:  seedKeyword,
+                    search_volume: kw.search_volume  || 0,
+                    difficulty:    Math.round(kw.magnet_iq_score || 0),
+                    cpr_8day:      kw.cpr_8day       || 0,
+                    keyword_sales: kw.keyword_sales  || 0,
+                    avg_price:     parseFloat((kw.avg_price || 0).toFixed(2)),
+                    word_count:    kw.word_count     || 0,
+                    match_type:    kw.match_type     || '',
+                    currency,
+                }));
+
+            if (itemsToSave.length === 0) {
+                this.showToast('No keywords to save.', 'warning');
+                return;
+            }
+
+            // Get auth token and base URL
+            let token = '';
+            try {
+                if (typeof chrome !== 'undefined' && chrome.storage) {
+                    const data = await chrome.storage.local.get(['authToken']);
+                    token = data.authToken || '';
+                }
+            } catch (e) { /* ignore in non-extension context */ }
+
+            const baseUrl = window.API_CONFIG?.baseUrl || window.ApiClient?.baseUrl || 'http://127.0.0.1:8000';
+
+            const picker = new SaveToList({
+                listType: 'keyword_magnet',
+                items:    itemsToSave,
+                baseUrl,
+                token,
+                onSuccess: (count) => {
+                    this.showToast(`✓ ${count} keywords saved to list!`, 'success');
+                },
+            });
+            picker.open();
         });
 
         // Sorting

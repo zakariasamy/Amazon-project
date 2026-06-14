@@ -110,6 +110,11 @@ class MagnetAnalyzer {
      * @returns {Promise<object>} Complete analysis results
      */
     async analyze(seedKeyword, options = {}, onProgress = null) {
+        const isOnline = await window.ApiClient.checkHealth();
+        if (!isOnline) {
+            throw new Error('Backend server is offline. Please start the server to use this tool.');
+        }
+
         if (!seedKeyword || seedKeyword.trim().length < 2) {
             throw new Error('Seed keyword must be at least 2 characters');
         }
@@ -136,6 +141,13 @@ class MagnetAnalyzer {
             console.warn('[Magnet] Failed to fetch global settings for test mode:', e);
         }
 
+        // Default settings mapping to ensure safe fallback
+        this.fetchBsrEnabled = true;
+        this.useBackendCache = !this.testModeEnabled;
+        this.bsrProductsLimit = 20;
+        this.bsrParallelRequests = 3;
+        this.bsrDelayMs = 500;
+
         // Fetch configurable settings from backend
         try {
             const backendSettings = await this.fetchBackendSettings();
@@ -155,7 +167,21 @@ class MagnetAnalyzer {
                 // Timing
                 this.config.delayBetweenRequests = backendSettings.delay_between_requests || 300;
 
-                console.log('[Magnet] Loaded backend settings:', backendSettings);
+                // Load Magnet-specific BSR configuration values
+                this.fetchBsrEnabled = backendSettings.magnet_fetch_bsr_enabled !== false;
+                this.useBackendCache = !this.testModeEnabled; // Use cache if not in test mode
+                this.bsrProductsLimit = parseInt(backendSettings.magnet_bsr_products_limit) || 20;
+                this.bsrParallelRequests = parseInt(backendSettings.magnet_bsr_parallel_requests) || 3;
+                this.bsrDelayMs = parseInt(backendSettings.magnet_bsr_delay_ms) || 500;
+
+                console.log('[Magnet] Loaded backend settings:', {
+                    ...backendSettings,
+                    fetchBsrEnabled: this.fetchBsrEnabled,
+                    useBackendCache: this.useBackendCache,
+                    bsrProductsLimit: this.bsrProductsLimit,
+                    bsrParallelRequests: this.bsrParallelRequests,
+                    bsrDelayMs: this.bsrDelayMs
+                });
             }
         } catch (e) {
             console.warn('[Magnet] Could not fetch backend settings, using defaults:', e.message);
@@ -989,6 +1015,19 @@ class MagnetAnalyzer {
      * Get metrics for a single keyword (WITHOUT rank - key difference from Cerebro)
      */
     async getKeywordMetrics(keyword) {
+        // Step 1: Check backend cache first if enabled to save requests and speed up
+        if (this.useBackendCache) {
+            try {
+                const cachedResult = await this.fetchFromBackendCacheOnly(keyword, 0);
+                if (cachedResult && cachedResult.search_volume > 0) {
+                    console.log(`[Magnet] Keyword "${keyword}" loaded from backend cache directly!`);
+                    return cachedResult;
+                }
+            } catch (err) {
+                console.warn('[Magnet] Pre-check cache error:', err.message);
+            }
+        }
+
         const origin = window.location.origin;
         const urlParams = new URLSearchParams(window.location.search);
         const langParam = urlParams.get('language');
@@ -1112,11 +1151,74 @@ class MagnetAnalyzer {
             const avgPrice = priceCount > 0 ? Math.round(totalPrice / priceCount * 100) / 100 : 0;
             const avgReviews = reviewCount > 0 ? Math.round(totalReviews / reviewCount) : 0;
 
+            // Slice parsed products to the limit (default 20) for calculation parity with Market Analysis
+            const limit = this.bsrProductsLimit || 20;
+            let slicedProducts = parsedProducts.slice(0, limit);
+
+            // BSR cache check and Amazon background fetches if enabled
+            if (this.fetchBsrEnabled && slicedProducts.length > 0) {
+                try {
+                    const apiBase = window.API_CONFIG?.baseUrl || 'http://127.0.0.1:8000';
+                    const cacheResponse = await fetch(`${apiBase}/api/products/cache/batch`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            marketplace: this.marketplace,
+                            asins: slicedProducts.map(p => p.asin)
+                        })
+                    });
+
+                    if (cacheResponse.ok) {
+                        const cacheData = await cacheResponse.json();
+                        if (cacheData.success && cacheData.by_asin) {
+                            slicedProducts.forEach(p => {
+                                const cached = cacheData.by_asin[p.asin.toUpperCase()];
+                                if (cached) {
+                                    p.bsr = cached.bsr;
+                                    p.category = cached.category;
+                                    if (cached.monthly_sales !== null && cached.monthly_sales !== undefined) {
+                                        p.monthly_sales = cached.monthly_sales;
+                                    }
+                                    if (cached.price && (!p.price || p.price <= 0)) {
+                                        p.price = cached.price;
+                                    }
+                                    if (cached.title && !p.title) {
+                                        p.title = cached.title;
+                                    }
+                                }
+                            });
+                            console.log(`[Magnet] Checked product cache for "${keyword}". Found ${cacheData.found} of ${slicedProducts.length} ASINs cached.`);
+                        }
+                    }
+                } catch (cacheErr) {
+                    console.warn('[Magnet] Failed to check product cache:', cacheErr.message);
+                }
+
+                // Call enrichWithBSR to scrape any missing BSRs from Amazon
+                if (typeof SerpParser !== 'undefined') {
+                    try {
+                        const serpParser = new SerpParser(doc);
+                        const enrichOptions = {
+                            limit: this.bsrProductsLimit || 20,
+                            batchSize: this.bsrParallelRequests || 3,
+                            batchDelay: this.bsrDelayMs || 500
+                        };
+                        console.log(`[Magnet] Fetching missing BSRs for "${keyword}"...`);
+                        slicedProducts = await serpParser.enrichWithBSR(slicedProducts, enrichOptions);
+                    } catch (enrichErr) {
+                        console.warn('[Magnet] Failed BSR enrichment:', enrichErr.message);
+                    }
+                }
+            }
+
             // ── Backend call: difficulty + search volume, identical to Market Analysis ─
             // prefer_cached_volume: true → backend returns the same cached value that a
             // previous Market Analysis stored, ensuring both tools show the same number.
-            let searchVolume = this.estimateSearchVolume(competingProducts, avgReviews); // local fallback
-            let difficultyScore = 50; // safe fallback
+            let searchVolume = 0;
+            let difficultyScore = 0;
             try {
                 const apiBase = window.API_CONFIG?.baseUrl || 'http://127.0.0.1:8000';
                 const batchPayload = {
@@ -1124,7 +1226,7 @@ class MagnetAnalyzer {
                         keyword,
                         marketplace: this.marketplace,
                         prefer_cached_volume: true,   // ← use same cached volume as Market Analysis
-                        products: parsedProducts.map((p, idx) => ({
+                        products: slicedProducts.map((p, idx) => ({
                             asin: p.asin || `MAGNET${idx}`,      // fallback to placeholder if missing
                             position: idx + 1,
                             title: p.title || '',
@@ -1133,8 +1235,9 @@ class MagnetAnalyzer {
                             reviews: p.reviews || 0,
                             rating: p.rating || 0,
                             is_sponsored: p.is_sponsored || false,
-                            bsr: null,
-                            monthly_sales: null
+                            bsr: p.bsr || null,
+                            monthly_sales: p.monthly_sales || null,
+                            category: p.category || null
                         }))
                     }]
                 };
@@ -1149,45 +1252,28 @@ class MagnetAnalyzer {
                     body: JSON.stringify(batchPayload)
                 });
 
-                if (batchResp.ok) {
-                    const batchData = await batchResp.json();
-                    if (batchData.success && batchData.results && batchData.results.length > 0) {
-                        const res = batchData.results[0];
-
-                        // Difficulty (same formula/data as Market Analysis)
-                        const backendScore = res?.difficulty?.score;
-                        if (backendScore != null && !isNaN(backendScore) && backendScore > 0) {
-                            difficultyScore = backendScore;
-                            console.log(`[Magnet] Backend KD for "${keyword}": ${difficultyScore}`);
-                        } else {
-                            const seedKd = this.seedDifficulty || 40;
-                            difficultyScore = Math.max(12, Math.round(seedKd * 0.85 * (0.9 + Math.random() * 0.2)));
-                            console.log(`[Magnet] Backend KD was 0 or null, using fallback KD for "${keyword}": ${difficultyScore}`);
-                        }
-
-                        // Search volume – use backend value when it has real data (cache or BSR)
-                        // If source is 'fallback' the backend had no data either; keep local estimate.
-                        const backendVolume = res?.search_volume?.estimated;
-                        const volumeSource = res?.search_volume?.source;
-                        if (backendVolume > 0 && volumeSource !== 'fallback') {
-                            searchVolume = backendVolume;
-                            console.log(`[Magnet] Backend volume for "${keyword}": ${searchVolume} (source: ${volumeSource})`);
-                        }
-
-                        // Title density from backend
-                        const backendTitleDensity = res?.title_density;
-                        if (backendTitleDensity != null && !isNaN(backendTitleDensity)) {
-                            titleDensity = backendTitleDensity;
-                            console.log(`[Magnet] Backend Title Density for "${keyword}": ${titleDensity}`);
-                        }
-                    }
-                } else {
-                    console.warn(`[Magnet] Backend unavailable (${batchResp.status}), using local fallbacks`);
-                    difficultyScore = this.calculateKeywordDifficulty(parsedProducts).score;
+                if (!batchResp.ok) {
+                    throw new Error(`Backend estimation service returned status ${batchResp.status}`);
                 }
+
+                const batchData = await batchResp.json();
+                if (!batchData.success || !batchData.results || batchData.results.length === 0) {
+                    throw new Error('Backend estimation service returned unsuccessful response');
+                }
+
+                const res = batchData.results[0];
+                difficultyScore = res?.difficulty?.score || 50;
+                searchVolume = res?.search_volume?.estimated || 0;
+                
+                // Title density from backend
+                const backendTitleDensity = res?.title_density;
+                if (backendTitleDensity != null && !isNaN(backendTitleDensity)) {
+                    titleDensity = backendTitleDensity;
+                }
+                console.log(`[Magnet] Backend KD for "${keyword}": ${difficultyScore}, Volume: ${searchVolume}, Title Density: ${titleDensity}`);
             } catch (kdErr) {
-                console.warn(`[Magnet] Backend call failed, using local fallbacks:`, kdErr.message);
-                difficultyScore = this.calculateKeywordDifficulty(parsedProducts).score;
+                console.error(`[Magnet] Backend call failed:`, kdErr.message);
+                throw kdErr;
             }
             // ─────────────────────────────────────────────────────────────────────────
 
@@ -1213,7 +1299,7 @@ class MagnetAnalyzer {
 
         } catch (e) {
             console.error(`[Magnet] Metrics error for "${keyword}":`, e.message);
-            return this.getDefaultMetrics();
+            throw e;
         }
     }
 

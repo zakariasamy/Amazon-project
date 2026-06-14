@@ -89,6 +89,10 @@ class AdminSettingsController extends Controller
             'use_youtube_suggestions' => ['nullable', 'boolean'],
             'attribute_variation_scope' => ['required', 'string', 'in:seed,top_n,all'],
             'attribute_variation_limit' => ['required', 'integer', 'min:1', 'max:100'],
+            'magnet_fetch_bsr_enabled' => ['nullable', 'boolean'],
+            'magnet_bsr_products_limit' => ['required', 'integer', 'min:0', 'max:60'],
+            'magnet_bsr_parallel_requests' => ['required', 'integer', 'min:1', 'max:10'],
+            'magnet_bsr_delay_ms' => ['required', 'integer', 'min:0', 'max:5000'],
         ]);
 
         $data['cerebro_fetch_bsr_enabled'] = $request->boolean('cerebro_fetch_bsr_enabled');
@@ -108,6 +112,7 @@ class AdminSettingsController extends Controller
         $magnetData['use_google_suggestions'] = $request->boolean('use_google_suggestions');
         $magnetData['use_bing_suggestions'] = $request->boolean('use_bing_suggestions');
         $magnetData['use_youtube_suggestions'] = $request->boolean('use_youtube_suggestions');
+        $magnetData['magnet_fetch_bsr_enabled'] = $request->boolean('magnet_fetch_bsr_enabled');
 
         foreach ($this->defaults() as $key => $default) {
             DB::table('app_settings')->updateOrInsert(
@@ -170,6 +175,26 @@ class AdminSettingsController extends Controller
                 'value' => 300,
                 'type' => 'integer',
                 'description' => 'Delay in milliseconds between scraping requests for keyword metrics.',
+            ],
+            'magnet_fetch_bsr_enabled' => [
+                'value' => true,
+                'type' => 'boolean',
+                'description' => 'Fetch product pages for BSR per keyword SERP in background. More accurate volume/difficulty, slower analysis.',
+            ],
+            'magnet_bsr_products_limit' => [
+                'value' => 20,
+                'type' => 'integer',
+                'description' => 'Max SERP products to fetch BSR for per keyword. Match Search Page Market Analysis for closest volume parity.',
+            ],
+            'magnet_bsr_parallel_requests' => [
+                'value' => 3,
+                'type' => 'integer',
+                'description' => 'Parallel product page fetches for BSR.',
+            ],
+            'magnet_bsr_delay_ms' => [
+                'value' => 500,
+                'type' => 'integer',
+                'description' => 'Delay in milliseconds between BSR fetch batches.',
             ],
             'use_autocomplete' => [
                 'value' => true,

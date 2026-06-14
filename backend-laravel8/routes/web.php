@@ -7,6 +7,8 @@ use App\Http\Controllers\MagnetWebController;
 use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\Api\CerebroFolderController;
 use App\Http\Controllers\GuideController;
+use App\Http\Controllers\DashboardFolderController;
+use App\Http\Controllers\DashboardListController;
 
 /*
 |--------------------------------------------------------------------------
@@ -82,4 +84,21 @@ Route::middleware('auth')->group(function () {
     Route::delete('/cerebro/folders/{id}/keywords', [CerebroFolderController::class, 'removeKeywords'])->name('cerebro.folder.removeKeywords');
     Route::post('/cerebro/folders/{id}/import-csv', [CerebroFolderController::class, 'importCsv'])->name('cerebro.folder.importCsv');
     Route::get('/cerebro/folders/{id}/export-csv', [CerebroFolderController::class, 'exportCsv'])->name('cerebro.folder.exportCsv');
+
+    // ─── Dashboard Folders ─────────────────────────────────────────────────────
+    Route::get('/folders',                           [DashboardFolderController::class, 'index'])->name('folders.index');
+    Route::get('/folders/{id}',                      [DashboardFolderController::class, 'show'])->name('folders.show');
+    Route::post('/folders',                          [DashboardFolderController::class, 'store'])->name('folders.store');
+    Route::put('/folders/{id}',                      [DashboardFolderController::class, 'update'])->name('folders.update');
+    Route::delete('/folders/{id}',                   [DashboardFolderController::class, 'destroy'])->name('folders.destroy');
+
+    // ─── Dashboard Lists ───────────────────────────────────────────────────────
+    Route::post('/folders/{folderId}/lists',         [DashboardListController::class, 'store'])->name('lists.store');
+    Route::get('/lists/{id}',                        [DashboardListController::class, 'show'])->name('lists.show');
+    Route::delete('/lists/{id}',                     [DashboardListController::class, 'destroy'])->name('lists.destroy');
+
+    // ─── List Items ────────────────────────────────────────────────────────────
+    Route::post('/lists/{listId}/items',             [DashboardListController::class, 'storeItem'])->name('lists.items.store');
+    Route::delete('/lists/{listId}/items',           [DashboardListController::class, 'destroyItems'])->name('lists.items.destroyBulk');
+    Route::delete('/lists/{listId}/items/{itemId}',  [DashboardListController::class, 'destroyItem'])->name('lists.items.destroy');
 });

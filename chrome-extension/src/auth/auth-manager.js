@@ -10,11 +10,19 @@ class AuthManager {
    * Initialize auth from storage
    */
   async init() {
-    const data = await chrome.storage.local.get(['authToken', 'user']);
-    this.token = data.authToken || null;
-    this.user = data.user || null;
-    
-    return this.isAuthenticated();
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({ action: 'getAuth' }, (response) => {
+        if (response && response.authenticated) {
+          this.token = response.token || null;
+          this.user = response.user || null;
+          resolve(true);
+        } else {
+          this.token = null;
+          this.user = null;
+          resolve(false);
+        }
+      });
+    });
   }
 
   /**
@@ -193,7 +201,11 @@ class AuthManager {
     this.token = null;
     this.user = null;
     
-    await chrome.storage.local.remove(['authToken', 'user']);
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({ action: 'logout' }, () => {
+        resolve();
+      });
+    });
   }
 
   /**

@@ -35,13 +35,48 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     if (request.action === 'getAuth') {
         console.log('Handling getAuth request...');
-        // Return authentication status
-        chrome.storage.local.get(['authToken', 'user'], (data) => {
-            const response = {
-                authenticated: !!(data.authToken && data.user),
-                user: data.user
-            };
-            sendResponse(response);
+        
+        const getCookie = (name, callback) => {
+            chrome.cookies.get({ url: 'http://127.0.0.1/', name: name }, (c1) => {
+                if (c1 && c1.value) {
+                    callback(c1.value);
+                } else {
+                    chrome.cookies.get({ url: 'http://localhost/', name: name }, (c2) => {
+                        if (c2 && c2.value) {
+                            callback(c2.value);
+                        } else {
+                            callback(null);
+                        }
+                    });
+                }
+            });
+        };
+
+        getCookie('extension_auth_token', (token) => {
+            if (token) {
+                getCookie('extension_user_info', (userJson) => {
+                    if (userJson) {
+                        try {
+                            const decodedToken = decodeURIComponent(token);
+                            const user = JSON.parse(decodeURIComponent(userJson));
+                            chrome.storage.local.set({ authToken: decodedToken, user: user }, () => {
+                                console.log('Automatically authenticated from dashboard cookies:', user.email);
+                                sendResponse({ authenticated: true, token: decodedToken, user: user });
+                            });
+                            return;
+                        } catch (e) {
+                            console.error('Failed to parse user cookie:', e);
+                        }
+                    }
+                    chrome.storage.local.remove(['authToken', 'user'], () => {
+                        sendResponse({ authenticated: false, token: null, user: null });
+                    });
+                });
+            } else {
+                chrome.storage.local.remove(['authToken', 'user'], () => {
+                    sendResponse({ authenticated: false, token: null, user: null });
+                });
+            }
         });
         return true; // Keep channel open for async response
     }
@@ -92,6 +127,34 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 console.error('Suggestions error:', error);
                 sendResponse({ success: false, suggestions: [] });
             });
+        return true;
+    }
+
+    if (request.action === 'logout') {
+        console.log('Handling logout request...');
+        const domains = ['127.0.0.1', 'localhost'];
+        
+        domains.forEach(domain => {
+            chrome.cookies.getAll({ domain: domain }, (cookies) => {
+                if (cookies) {
+                    cookies.forEach(cookie => {
+                        const protocol = cookie.secure ? 'https://' : 'http://';
+                        const cleanDomain = cookie.domain.startsWith('.') ? cookie.domain.substring(1) : cookie.domain;
+                        const url = `${protocol}${cleanDomain}${cookie.path}`;
+                        
+                        chrome.cookies.remove({ url: url, name: cookie.name }, (details) => {
+                            if (chrome.runtime.lastError) {
+                                console.warn(`Failed to remove cookie ${cookie.name} on ${url}:`, chrome.runtime.lastError);
+                            }
+                        });
+                    });
+                }
+            });
+        });
+
+        chrome.storage.local.remove(['authToken', 'user'], () => {
+            sendResponse({ success: true });
+        });
         return true;
     }
 

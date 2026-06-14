@@ -25,7 +25,6 @@ class ProductCacheController extends Controller
         $products = DB::table('product_cache')
             ->where('marketplace', $validated['marketplace'])
             ->whereIn('asin', $asins)
-            ->whereDate('last_scraped_at', now()->toDateString())
             ->get()
             ->map(function ($row) {
                 return [

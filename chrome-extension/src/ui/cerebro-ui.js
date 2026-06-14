@@ -98,6 +98,7 @@ class CerebroUI {
             'select products to analyze': 'اختر منتجات لتحليلها',
             'clear all': 'مسح الكل',
             'analyze keywords': 'تحليل الكلمات المفتاحية',
+            'save selected': 'حفظ المحدد',
             'asins analyzed': 'المنتجات (ASINs) المحللة',
             'keywords found': 'الكلمات المكتشفة',
             'avg iq score': 'متوسط درجة الذكاء',
@@ -180,8 +181,13 @@ class CerebroUI {
     async initOnSearchPage(settings = null) {
         console.log('[Cerebro] Initializing on search page');
 
+        const isOnline = await window.ApiClient.checkHealth();
+        if (!isOnline) {
+            this.isOffline = true;
+        }
+
         // If settings weren't passed, fetch them asynchronously
-        if (!settings) {
+        if (!settings && !this.isOffline) {
             try {
                 const baseUrl = this.getBackendBaseUrl();
                 const response = await fetch(`${baseUrl}/api/settings?_t=${Date.now()}`);
@@ -198,7 +204,7 @@ class CerebroUI {
             ? (settings.feature_keyword_analyzer_pro_enabled === true || settings.feature_keyword_analyzer_pro_enabled === 'true' || settings.feature_keyword_analyzer_pro_enabled === 1 || settings.feature_keyword_analyzer_pro_enabled === '1')
             : true;
 
-        if (!isKeywordAnalyzerEnabled) {
+        if (!isKeywordAnalyzerEnabled && !this.isOffline) {
             console.log('[Cerebro] Competitor Keyword Analyzer is disabled by admin setting.');
             return;
         }
@@ -212,6 +218,12 @@ class CerebroUI {
         // 3. Inject checkboxes immediately (without waiting for settings, to ensure fast UI)
         this.injectProductCheckboxes();
         
+        // If offline, customize selection bar for offline mode
+        if (this.isOffline) {
+            this.showOfflineSelectionBar();
+            return;
+        }
+
         // 4. Handle test mode and auto-select
         if (settings) {
             this.testModeEnabled = this.parseBooleanSetting(settings.test_mode_enabled, false);
@@ -294,9 +306,13 @@ class CerebroUI {
             checkbox.style.cssText = `
                 width: 20px;
                 height: 20px;
-                cursor: pointer;
+                cursor: ${this.isOffline ? 'not-allowed' : 'pointer'};
                 accent-color: #6366f1;
+                opacity: ${this.isOffline ? '0.5' : '1'};
             `;
+            if (this.isOffline) {
+                checkbox.disabled = true;
+            }
 
             // Position label
             const label = document.createElement('span');
@@ -310,6 +326,10 @@ class CerebroUI {
                 border-radius: 4px;
                 display: none;
             `;
+
+            checkbox.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
 
             checkbox.addEventListener('change', (e) => {
                 if (e.target.checked) {
@@ -382,6 +402,7 @@ class CerebroUI {
     createSelectionBar() {
         if (this.selectionBar) return;
 
+        // ── Main Competitor Keyword Analyzer bar ──────────────────────────────
         this.selectionBar = document.createElement('div');
         this.selectionBar.id = 'cerebro-selection-bar';
         this.selectionBar.style.cssText = `
@@ -448,11 +469,11 @@ class CerebroUI {
         document.body.appendChild(this.selectionBar);
         this.translateDOM(this.selectionBar);
 
-        // Event listeners
+        // Event listeners for the CKA bar
         this.selectionBar.querySelector('#cerebro-clear-btn').addEventListener('click', () => this.clearSelection());
         this.selectionBar.querySelector('#cerebro-analyze-btn').addEventListener('click', () => this.startAnalysis());
 
-        // Hover effects
+        // Hover effect on Analyze button
         const analyzeBtn = this.selectionBar.querySelector('#cerebro-analyze-btn');
         analyzeBtn.addEventListener('mouseenter', () => {
             analyzeBtn.style.transform = 'translateY(-2px)';
@@ -463,8 +484,92 @@ class CerebroUI {
             analyzeBtn.style.boxShadow = '0 4px 15px rgba(99, 102, 241, 0.4)';
         });
 
+        // ── Separate "Save Selected Products" floating button ─────────────────
+        // Lives at bottom-right, independent of the CKA bar
+        this.saveProductsFloatBtn = document.createElement('div');
+        this.saveProductsFloatBtn.id = 'cerebro-save-products-float';
+        this.saveProductsFloatBtn.style.cssText = `
+            position: fixed;
+            bottom: -100px;
+            right: 24px;
+            z-index: 999999;
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            transition: bottom 0.3s ease-out;
+        `;
+        this.saveProductsFloatBtn.innerHTML = `
+            <button id="cerebro-save-products-btn" style="
+                background: linear-gradient(135deg, #10b981, #059669);
+                border: none;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 14px;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                gap: 9px;
+                transition: all 0.2s;
+                box-shadow: 0 6px 24px rgba(16, 185, 129, 0.45), 0 0 0 1px rgba(255,255,255,0.08);
+                font-family: 'Inter', -apple-system, system-ui, sans-serif;
+                white-space: nowrap;
+            ">
+                <span style="font-size:16px;">📁</span>
+                <span id="cerebro-save-products-label">Save Selected Products (0)</span>
+            </button>
+        `;
+        document.body.appendChild(this.saveProductsFloatBtn);
+
+        const saveProductsBtn = this.saveProductsFloatBtn.querySelector('#cerebro-save-products-btn');
+        saveProductsBtn.addEventListener('click', () => this.saveSelectedProducts());
+        saveProductsBtn.addEventListener('mouseenter', () => {
+            saveProductsBtn.style.transform = 'translateY(-3px)';
+            saveProductsBtn.style.boxShadow = '0 10px 30px rgba(16, 185, 129, 0.6), 0 0 0 1px rgba(255,255,255,0.1)';
+        });
+        saveProductsBtn.addEventListener('mouseleave', () => {
+            saveProductsBtn.style.transform = 'translateY(0)';
+            saveProductsBtn.style.boxShadow = '0 6px 24px rgba(16, 185, 129, 0.45), 0 0 0 1px rgba(255,255,255,0.08)';
+        });
+
         // Initialize state
         this.updateSelectionBar();
+    }
+
+    /**
+     * Deactivate and customize UI when backend is offline
+     */
+    showOfflineSelectionBar() {
+        if (!this.selectionBar) return;
+
+        this.selectionBar.style.border = '1px solid #ef4444';
+        this.selectionBar.style.bottom = '20px';
+
+        const countEl = this.selectionBar.querySelector('#cerebro-selection-count');
+        if (countEl) {
+            countEl.innerHTML = this.isArabic()
+                ? '<span style="color: #ef4444; font-weight: 700;">⚠️ الخادم الخلفي غير متصل. تم إيقاف محلل الكلمات المفتاحية للمنافسين.</span>'
+                : '<span style="color: #ef4444; font-weight: 700;">⚠️ Backend server is offline. Competitor Keyword Analyzer is deactivated.</span>';
+        }
+
+        const analyzeBtn = this.selectionBar.querySelector('#cerebro-analyze-btn');
+        if (analyzeBtn) {
+            analyzeBtn.disabled = true;
+            analyzeBtn.style.opacity = '0.5';
+            analyzeBtn.style.cursor = 'not-allowed';
+            analyzeBtn.style.pointerEvents = 'none';
+        }
+
+        const clearBtn = this.selectionBar.querySelector('#cerebro-clear-btn');
+        if (clearBtn) {
+            clearBtn.disabled = true;
+            clearBtn.style.opacity = '0.5';
+            clearBtn.style.cursor = 'not-allowed';
+            clearBtn.style.pointerEvents = 'none';
+        }
+
+        if (this.saveProductsFloatBtn) {
+            this.saveProductsFloatBtn.style.bottom = '-100px';
+        }
     }
 
     /**
@@ -478,7 +583,7 @@ class CerebroUI {
         const badgesEl = this.selectionBar.querySelector('#cerebro-selected-badges');
         const analyzeBtn = this.selectionBar.querySelector('#cerebro-analyze-btn');
 
-        // Update count text and bottom position
+        // Update CKA bar count text and slide-in/out
         if (count === 0) {
             countEl.textContent = this.isArabic() ? 'اختر منتجات لتحليلها' : 'Select products to analyze';
             this.selectionBar.style.bottom = '-120px';
@@ -489,10 +594,11 @@ class CerebroUI {
             }
             this.selectionBar.style.bottom = '20px';
         }
+
         this.translateDOM(this.selectionBar);
 
-        // Update badges
-        badgesEl.innerHTML = Array.from(this.selectedAsins).slice(0, 5).map(asin => `
+        // Update ASIN badges
+        badgesEl.innerHTML = Array.from(this.selectedAsins).slice(0, 10).map(asin => `
             <span style="
                 background: #374151;
                 color: #e5e7eb;
@@ -503,11 +609,11 @@ class CerebroUI {
             ">${asin.substring(0, 6)}...</span>
         `).join('');
 
-        if (count > 5) {
-            badgesEl.innerHTML += `<span style="color: #9ca3af; font-size: 11px;">+${count - 5} more</span>`;
+        if (count > 10) {
+            badgesEl.innerHTML += `<span style="color: #9ca3af; font-size: 11px;">+${count - 10} more</span>`;
         }
 
-        // Update button state
+        // Update Analyze button state
         if (count === 0) {
             analyzeBtn.disabled = true;
             analyzeBtn.style.opacity = '0.5';
@@ -516,6 +622,25 @@ class CerebroUI {
             analyzeBtn.disabled = false;
             analyzeBtn.style.opacity = '1';
             analyzeBtn.style.cursor = 'pointer';
+        }
+
+        // Update the separate Save Selected Products floating button
+        if (this.saveProductsFloatBtn) {
+            const saveBtn = this.saveProductsFloatBtn.querySelector('#cerebro-save-products-btn');
+            const saveLabel = this.saveProductsFloatBtn.querySelector('#cerebro-save-products-label');
+
+            if (count === 0) {
+                // Slide the button off-screen
+                this.saveProductsFloatBtn.style.bottom = '-100px';
+                if (saveBtn) { saveBtn.disabled = true; }
+            } else {
+                // Slide it in above the bottom edge; sit above page UI if CKA bar is also visible
+                this.saveProductsFloatBtn.style.bottom = '20px';
+                if (saveBtn) { saveBtn.disabled = false; }
+                if (saveLabel) {
+                    saveLabel.textContent = `Save Selected Products (${count})`;
+                }
+            }
         }
     }
 
@@ -535,6 +660,101 @@ class CerebroUI {
         });
 
         this.updateSelectionBar();
+    }
+
+    /**
+     * Save the selected products to a list of type products
+     */
+    async saveSelectedProducts() {
+        if (this.selectedAsins.size === 0) {
+            this.showToast('Please select at least one product', 'warning');
+            return;
+        }
+
+        try {
+            if (typeof SerpParser === 'undefined') {
+                throw new Error('SerpParser is not loaded');
+            }
+
+            const parser = new SerpParser(document);
+            const pageProducts = parser.extractProducts();
+            
+            // Map parsed products by ASIN for easy lookup
+            const parsedMap = new Map(pageProducts.map(p => [p.asin, p]));
+            const selectedProducts = [];
+
+            this.selectedAsins.forEach(asin => {
+                if (parsedMap.has(asin)) {
+                    selectedProducts.push(parsedMap.get(asin));
+                } else {
+                    // Try to parse the specific card container on the page
+                    const card = document.querySelector(`[data-asin="${asin}"]`);
+                    if (card) {
+                        const title = parser.extractTitle(card);
+                        const price = parser.extractPrice(card);
+                        const rating = parser.extractRating(card);
+                        const reviews = parser.extractReviewCount(card);
+                        selectedProducts.push({
+                            asin,
+                            title: title || `Amazon Product ${asin}`,
+                            price: price || 0,
+                            rating: rating || 0,
+                            reviews: reviews || 0
+                        });
+                    } else {
+                        // Hard fallback if card is no longer in DOM
+                        selectedProducts.push({
+                            asin,
+                            title: `Amazon Product ${asin}`,
+                            price: 0,
+                            rating: 0,
+                            reviews: 0
+                        });
+                    }
+                }
+            });
+
+            const currency = window.location.hostname.includes('.eg') ? 'EGP' : 'USD';
+            const itemsToSave = selectedProducts.map(p => ({
+                asin:         p.asin,
+                title:        p.title || 'Unknown',
+                price:        typeof p.price === 'number' ? p.price : (parseFloat(String(p.price).replace(/[^0-9.]/g, '')) || 0),
+                currency:     currency,
+                bsr:          p.bsr ? parseInt(String(p.bsr).replace(/[^0-9]/g, '')) : 0,
+                rating:       parseFloat(p.rating) || 0,
+                rating_count: typeof p.reviews === 'number' ? p.reviews : (parseInt(String(p.reviews).replace(/[^0-9]/g, '')) || 0),
+                marketplace:  window.location.hostname,
+                url:          `https://${window.location.hostname}/dp/${p.asin}`
+            }));
+
+            const sendMessage = typeof safeSendMessage !== 'undefined' ? safeSendMessage : (msg, cb) => chrome.runtime.sendMessage(msg, cb);
+
+            sendMessage({ action: 'getAuth' }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error('[Cerebro] getAuth runtime error:', chrome.runtime.lastError);
+                    this.showToast('Auth token error.', 'warning');
+                    return;
+                }
+                if (response && response.token) {
+                    const picker = new SaveToList({
+                        listType: 'products',
+                        items: itemsToSave,
+                        baseUrl: this.getBackendBaseUrl(),
+                        token: response.token,
+                        onSuccess: () => {
+                            this.clearSelection();
+                        }
+                    });
+                    picker.open();
+                } else {
+                    this.showToast('Authentication token is required to save.', 'warning');
+                }
+            });
+
+        } catch (error) {
+            console.error('[Cerebro] Failed to save selected products:', error);
+            this.showToast('Failed to save selected products: ' + error.message, 'warning');
+        }
     }
 
     /**
@@ -572,6 +792,14 @@ class CerebroUI {
 
         if (this.isAnalyzing) {
             this.showToast('Analysis already in progress', 'warning');
+            return;
+        }
+
+        const isOnline = await window.ApiClient.checkHealth();
+        if (!isOnline) {
+            this.showToast(this.isArabic()
+                ? '⚠️ الخادم الخلفي غير متصل. يرجى تشغيل الخادم الخلفي لتنشيط الأداة.'
+                : '⚠️ Backend server is offline. Please start the backend server to activate this tool.', 'error');
             return;
         }
 
@@ -882,10 +1110,10 @@ class CerebroUI {
                         padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 11px;
                     ">📝 Long-tail</button>
                     <div style="flex: 1;"></div>
-                    <button id="cerebro-export-btn" style="
-                        background: #10b981; border: none; color: white;
+                    <button id="cerebro-save-list-btn" style="
+                        background: #6366f1; border: none; color: white;
                         padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;
-                    ">📥 Export</button>
+                    ">📁 Save to List</button>
                 </div>
                 
                 <!-- Row 2: Advanced Filters -->
@@ -972,8 +1200,8 @@ class CerebroUI {
             </div>
         `;
 
-        // Store data for filtering
-        this.resultsData = { keywords, asins };
+        // Store data for filtering and saving
+        this.resultsData = { keywords, asins, products: results.asin_summaries || [] };
 
         // Quick filter event listeners
         content.querySelectorAll('.cerebro-quick-filter').forEach(btn => {
@@ -983,7 +1211,93 @@ class CerebroUI {
             });
         });
 
-        content.querySelector('#cerebro-export-btn').addEventListener('click', () => this.exportCSV());
+        // Save to List handler
+        content.querySelector('#cerebro-save-list-btn')?.addEventListener('click', async () => {
+            if (!this.resultsData || !this.resultsData.keywords) {
+                this.showToast('No keywords available to save.', 'warning');
+                return;
+            }
+
+            // Collect visible keywords from the table
+            const visibleKeywords = [...content.querySelectorAll('#cerebro-results-tbody tr')]
+                .filter(tr => tr.style.display !== 'none')
+                .map(tr => tr.querySelector('td')?.innerText?.trim())
+                .filter(Boolean);
+
+            if (visibleKeywords.length === 0) { 
+                this.showToast('No keywords to save.', 'warning'); 
+                return; 
+            }
+
+            const keywordMap = new Map(this.resultsData.keywords.map(k => [k.keyword, k]));
+            const itemsToSave = visibleKeywords.map(keyword => {
+                const kw = keywordMap.get(keyword);
+                if (kw) {
+                    return {
+                        keyword:              kw.keyword,
+                        search_volume:        kw.search_volume || 0,
+                        total_click_share:    kw.total_click_share || 0,
+                        total_keyword_sales:  kw.total_keyword_sales || 0,
+                        sponsored_count:      kw.sponsored_count || 0,
+                        difficulty_score:     kw.difficulty_score || 0,
+                        word_count:           kw.word_count || 0,
+                        asins_ranking:        kw.asins_ranking || 0,
+                        organic_ranks:        kw.organic_ranks || {},
+                    };
+                }
+                return null;
+            }).filter(Boolean);
+
+            if (itemsToSave.length === 0) {
+                this.showToast('No keywords found to save.', 'warning');
+                return;
+            }
+
+            // Put products and analyzed ASINs order in description
+            // Sanitize product data to ensure valid JSON
+            const sanitizedProducts = (this.resultsData.products || []).map(p => ({
+                asin:  (p.asin || '').replace(/[\x00-\x1F\x7F]/g, ''),
+                title: (p.title || '').substring(0, 200).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ''),
+                image: (p.image || '').substring(0, 500),
+                url:   (p.url   || '').substring(0, 300),
+                keywords_found: p.keywords_found || 0,
+            }));
+            let description;
+            try {
+                description = JSON.stringify({
+                    analyzed_products: sanitizedProducts,
+                    asins: this.resultsData.asins || []
+                });
+                // Quick validation: try to parse it back
+                JSON.parse(description);
+            } catch (jsonErr) {
+                console.warn('[Cerebro] JSON encode failed, falling back to ASINs-only description:', jsonErr);
+                description = JSON.stringify({
+                    analyzed_products: [],
+                    asins: this.resultsData.asins || []
+                });
+            }
+            console.log('[Cerebro] Saving description:', description.substring(0, 300));
+
+            let token = '';
+            try {
+                if (typeof chrome !== 'undefined' && chrome.storage) {
+                    const data = await chrome.storage.local.get(['authToken']);
+                    token = data.authToken || '';
+                }
+            } catch (e) {}
+
+            const baseUrl = this.getBackendBaseUrl();
+            const picker = new SaveToList({
+                listType: 'competitor_keyword_analyzer',
+                items:    itemsToSave,
+                description: description,
+                baseUrl,
+                token,
+                onSuccess: (count) => this.showToast(`✓ ${count} keywords saved to list!`, 'success'),
+            });
+            picker.open();
+        });
 
         // Advanced filter event listeners
         content.querySelector('#cerebro-apply-filters')?.addEventListener('click', () => this.applyAdvancedFilters());

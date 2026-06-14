@@ -27,6 +27,7 @@
             background: var(--bg);
             color: var(--text);
             -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
         }
 
         .layout {
@@ -94,15 +95,39 @@
             gap: 6px;
             margin-bottom: 24px;
             overflow-x: auto;
-            padding: 4px;
+            -webkit-overflow-scrolling: touch;
+            padding: 8px 24px;
             background: rgba(226, 232, 240, 0.8);
-            border-radius: 12px;
-            border: 1px solid var(--line);
-            scrollbar-width: none;
+            border-radius: 0;
+            border-left: none;
+            border-right: none;
+            border-top: 1px solid var(--line);
+            border-bottom: 1px solid var(--line);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(99, 102, 241, 0.25) transparent;
+            
+            /* Break out of .layout container to take full viewport width */
+            width: 100vw;
+            position: relative;
+            left: 50%;
+            margin-left: -50vw;
         }
 
         .tabs-bar::-webkit-scrollbar {
-            display: none;
+            height: 6px;
+        }
+
+        .tabs-bar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .tabs-bar::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.25);
+            border-radius: 10px;
+        }
+
+        .tabs-bar::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.45);
         }
 
         .tab-btn {
@@ -118,7 +143,9 @@
             transition: all 0.2s ease-in-out;
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
+            flex: 1 0 auto;
         }
 
         .tab-btn:hover {
@@ -573,6 +600,9 @@
                     'max_keywords_limit' => ['label' => 'Max Keywords Limit', 'min' => 10],
                     'delay_between_requests' => ['label' => 'Scraping Request Delay (ms)', 'min' => 0],
                     'attribute_variation_limit' => ['label' => 'Attribute Variation Limit', 'min' => 1],
+                    'magnet_bsr_products_limit' => ['label' => 'BSR Products Limit', 'min' => 0],
+                    'magnet_bsr_parallel_requests' => ['label' => 'Parallel BSR Fetches', 'min' => 1],
+                    'magnet_bsr_delay_ms' => ['label' => 'BSR Batch Delay (ms)', 'min' => 0],
                 ] as $key => $meta)
                     <div class="setting">
                         <div>
@@ -598,6 +628,7 @@
                 </div>
 
                 @foreach ([
+                    'magnet_fetch_bsr_enabled' => 'Fetch BSR for Keyword Magnet',
                     'use_autocomplete' => 'Use Amazon Autocomplete',
                     'use_related' => 'Use Related Keywords',
                     'use_titles' => 'Use Search Result Titles',

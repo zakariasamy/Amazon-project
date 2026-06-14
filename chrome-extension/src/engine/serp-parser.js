@@ -182,62 +182,85 @@ class SerpParser {
     }
 
     extractReviewCount(card) {
-        // Method 1: Look for aria-label with "ratings" or "reviews"
-        const ratingLinks = card.querySelectorAll('a[aria-label*="rating"], a[aria-label*="review"], a[aria-label*="تقييم"], a[aria-label*="مراجعة"]');
-        for (const link of ratingLinks) {
-            const ariaLabel = this.convertNumerals(link.getAttribute('aria-label') || '');
-            const match = ariaLabel.match(/([\d,]+)\s*(?:rating|review|تقييم|مراجعة)/i);
+        // Helper to extract a number from a string, supporting commas, dots, and Arabic numerals
+        const parseNumberFromString = (str) => {
+            if (!str) return 0;
+            const converted = this.convertNumerals(str);
+            // Replace common Arabic separators
+            const normalized = converted.replace(/٬/g, '').replace(/٫/g, '.').trim();
+            
+            // Avoid matching rating values e.g. "4.5 out of 5 stars" or "4.5 من 5 نجوم"
+            if (normalized.match(/out of 5|من 5|star|نجوم/i)) {
+                return 0;
+            }
+
+            // Match digits with optional commas/dots in between
+            const match = normalized.match(/([\d,.]+)/);
             if (match) {
-                const val = parseInt(match[1].replace(/,/g, ''));
+                // Remove all non-digit characters to get the clean integer count
+                const clean = match[1].replace(/[,.]/g, '');
+                const val = parseInt(clean, 10);
                 return isNaN(val) ? 0 : val;
             }
+            return 0;
+        };
+
+        // Strategy 1: Look at all potential review links
+        const reviewLinks = card.querySelectorAll(
+            'a[href*="/product-reviews/"], ' +
+            'a[href*="customerReviews"], ' +
+            'a[href*="#customerReviews"], ' +
+            'a[href*="acr_search_rvw"], ' +
+            'a[aria-label*="rating"], ' +
+            'a[aria-label*="review"], ' +
+            'a[aria-label*="تقييم"], ' +
+            'a[aria-label*="مراجعة"]'
+        );
+
+        for (const link of reviewLinks) {
+            // Check aria-label first (often holds the most detailed count text)
+            const ariaVal = parseNumberFromString(link.getAttribute('aria-label'));
+            if (ariaVal > 0) return ariaVal;
+
+            // Check text content
+            const textVal = parseNumberFromString(link.textContent);
+            if (textVal > 0) return textVal;
         }
 
-        // Method 2: Look for review count link with #customerReviews
-        const reviewLink = card.querySelector('[href*="#customerReviews"]');
-        if (reviewLink) {
-            const ariaLabel = this.convertNumerals(reviewLink.getAttribute('aria-label') || '');
-            const ariaMatch = ariaLabel.match(/([\d,]+)\s*(?:rating|review|تقييم|مراجعة)/i);
-            if (ariaMatch) {
-                const val = parseInt(ariaMatch[1].replace(/,/g, ''));
-                return isNaN(val) ? 0 : val;
-            }
-            const text = this.convertNumerals(reviewLink.textContent).replace(/[^\d]/g, '');
-            if (text) {
-                const val = parseInt(text);
-                return isNaN(val) ? 0 : val;
-            }
-        }
+        // Strategy 2: Look in the immediate vicinity of the star rating element
+        const starsEl = card.querySelector(
+            '.a-icon-star, ' +
+            '.a-icon-star-small, ' +
+            '[aria-label*="out of 5"], ' +
+            '[aria-label*="من 5"], ' +
+            '[aria-label*="نجوم"]'
+        );
 
-        // Method 3: Look for span with parentheses like "(5)"
-        const reviewsBlock = card.querySelector('[data-cy="reviews-block"], .a-row.a-size-small');
-        if (reviewsBlock) {
-            const spans = reviewsBlock.querySelectorAll('span');
-            for (const span of spans) {
-                const text = this.convertNumerals(span.textContent.trim());
-                const match = text.match(/^\(?(\d+)\)?$/);
-                if (match) {
-                    const val = parseInt(match[1]);
-                    return isNaN(val) ? 0 : val;
-                }
-            }
-        }
-
-        // Method 4: Fallback - look near star rating
-        const ratingContainer = card.querySelector('[aria-label*="star"], [aria-label*="نجوم"]');
-        if (ratingContainer) {
-            const parent = ratingContainer.closest('.a-row, .a-section');
+        if (starsEl) {
+            const parent = starsEl.closest('.a-row, .a-section, [data-cy="reviews-block"], div');
             if (parent) {
-                const links = parent.querySelectorAll('a, span');
-                for (const link of links) {
-                    const text = this.convertNumerals(link.textContent.trim());
-                    const match = text.match(/^\(?(\d[\d,]*)\)?$/);
-                    if (match) {
-                        const val = parseInt(match[1].replace(/,/g, ''));
-                        return isNaN(val) ? 0 : val;
+                // Get all links or spans in the rating container
+                const subElements = parent.querySelectorAll('a, span');
+                for (const el of subElements) {
+                    // Skip the star rating element itself
+                    if (el === starsEl || el.classList.contains('a-icon-alt') || el.querySelector('.a-icon-alt')) {
+                        continue;
                     }
+                    const val = parseNumberFromString(el.textContent);
+                    if (val > 0) return val;
                 }
             }
+        }
+
+        // Strategy 3: Check for s-underline-text links on the card that might contain reviews count
+        const underlineLinks = card.querySelectorAll('.s-underline-text');
+        for (const el of underlineLinks) {
+            // Skip if it contains price or brand related keywords
+            const text = el.textContent.trim();
+            if (text.match(/EGP|USD|\$|brand|ماركة/i)) continue;
+            
+            const val = parseNumberFromString(text);
+            if (val > 0) return val;
         }
 
         return 0;

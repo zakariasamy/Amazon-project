@@ -83,6 +83,11 @@ class ReverseAsin {
      * @param {Function} onProgress - Progress callback (stage, current, total, message)
      */
     async discoverKeywords(asin, productPageDoc = null, onProgress = null) {
+        const isOnline = await window.ApiClient.checkHealth();
+        if (!isOnline) {
+            return { error: 'Backend server is offline. Please start the server to use this tool.' };
+        }
+
         if (this.isRunning) {
             return { error: 'Discovery already in progress' };
         }
@@ -468,16 +473,15 @@ class ReverseAsin {
                                         // We can save individual rankings if needed, but batch save at end is better
                                     }
                                 });
+                            } else {
+                                throw new Error(data.message || 'Failed to estimate search volume from backend');
                             }
                         } else {
-                            console.warn(`Batch backend error: ${response.status}`);
-                            batchHadIssues = true;
-                            // Fallback: Add scraped but un-enriched results? 
-                            // Or just retry? For now, we accept meaningful stats might be missing
+                            throw new Error(`Backend estimation service returned status ${response.status}`);
                         }
                     } catch (e) {
                         console.error("Batch processing failed", e);
-                        batchHadIssues = true;
+                        throw e;
                     }
                 }
 

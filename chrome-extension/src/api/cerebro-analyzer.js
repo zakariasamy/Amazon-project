@@ -71,6 +71,11 @@ class CerebroAnalyzer {
      * @returns {Promise<object>} Complete analysis results
      */
     async analyze(asins, onProgress = null) {
+        const isOnline = await window.ApiClient.checkHealth();
+        if (!isOnline) {
+            throw new Error('Backend server is offline. Please start the server to use this tool.');
+        }
+
         if (!asins || asins.length === 0) {
             throw new Error('At least one ASIN is required');
         }
@@ -278,7 +283,8 @@ class CerebroAnalyzer {
                     keywords_found: r.result?.keywords?.length || 0,
                     error: r.error || null,
                     title: r.result?.productInfo?.title || '',
-                    image: r.result?.productInfo?.image || ''
+                    image: r.result?.productInfo?.image || '',
+                    url: `${window.location.origin}/dp/${r.asin}`
                 }))
             };
 
@@ -918,9 +924,8 @@ class CerebroAnalyzer {
                     throw new Error(`HTTP error ${response.status}`);
                 }
             } catch (e) {
-                console.warn(`[Cerebro] Backend estimation failed for "${keyword}", using local fallback:`, e);
-                const productsForVolume = serpProducts ? serpProducts : productSalesData;
-                estimated_volume = this.calculateSearchVolumeSerpV2(productsForVolume);
+                console.error(`[Cerebro] Backend estimation failed for "${keyword}":`, e);
+                throw e;
             }
             
             // Override with cached volume if it exists and is more reliable (i.e. is non-zero)
@@ -1075,12 +1080,7 @@ class CerebroAnalyzer {
             // ── Search Volume — Use SerpV2 calculation from Phase 1 ──
             // Priority 1: SerpV2 estimate from Phase 1 (position way like Reverse ASIN)
             // Priority 2: Fallback Magnet Analyzer estimate
-            let searchVolume = kw.search_volume;
-            
-            // If the SerpV2 algorithm fell back to 100, we can use the Magnet estimate to be safe
-            if (!searchVolume || searchVolume === 100) {
-                searchVolume = this.estimateSearchVolume(kw.competing_products, kw.avg_reviews || 0) || 100;
-            }
+            let searchVolume = kw.search_volume || 0;
 
             // Cerebro IQ Score = (Volume / Competing Products) × 10
             const iqScore = kw.competing_products > 0

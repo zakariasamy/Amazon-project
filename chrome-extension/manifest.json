@@ -17,7 +17,9 @@
     "https://www.amazon.ca/*",
     "https://completion.amazon.com/*",
     "http://localhost:8000/*",
-    "http://127.0.0.1:8000/*"
+    "http://127.0.0.1:8000/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
   ],
   "action": {
     "default_popup": "src/popup/login.html",
@@ -52,6 +54,7 @@
         "src/api/reverse-asin.js",
         "src/api/magnet-analyzer.js",
         "src/api/cerebro-analyzer.js",
+        "src/ui/save-to-list.js",
         "src/ui/shadow-ui.js",
         "src/ui/cerebro-ui.js",
         "src/ui/magnet-ui.js",

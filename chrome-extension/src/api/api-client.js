@@ -70,6 +70,11 @@ class ApiClient {
                     options.headers['Authorization'] = `Bearer ${this.token}`;
                     return await fetch(`${this.baseUrl}${endpoint}`, options);
                 }
+                // Clear invalid token if refresh fails
+                this.token = null;
+                if (typeof chrome !== 'undefined' && chrome.storage) {
+                    await chrome.storage.local.remove(['authToken', 'user']);
+                }
                 throw new Error('Session expired. Please login again.');
             }
 
@@ -113,6 +118,25 @@ class ApiClient {
             return true;
         } catch (error) {
             console.error('Token refresh error:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Check if the backend server is online
+     * @returns {Promise<boolean>}
+     */
+    async checkHealth() {
+        try {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), 2000); // 2 seconds timeout
+            const response = await fetch(`${this.baseUrl}/api/constants/version`, {
+                signal: controller.signal
+            });
+            clearTimeout(id);
+            return response.ok;
+        } catch (error) {
+            console.error('[ApiClient] Health check failed:', error);
             return false;
         }
     }
