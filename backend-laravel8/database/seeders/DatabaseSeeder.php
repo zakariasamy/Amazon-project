@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             AlgorithmConstantsSeeder::class,
             FbaFeesSeeder::class,
             SeasonalitySeeder::class,
+            AdminUserSeeder::class,
         ]);
     }
 }

@@ -17,6 +17,7 @@ return [
     'hero_title_2' => 'Professional Analytics',
     'hero_description' => 'Helium 10-level keyword research, sales estimation, and market analysis. All from a simple Chrome extension.',
     'start_free_trial' => 'Start Free Trial',
+    'choose_plan' => 'Choose Plan',
     'see_features' => 'See Features',
     'stat_keywords' => 'Keywords Analyzed',
     'stat_accuracy' => 'Accuracy Rate',
@@ -31,12 +32,12 @@ return [
     'feature2_desc' => 'Accurate monthly sales estimates using BSR data and proprietary algorithms.',
     'feature3_title' => 'Reverse ASIN',
     'feature3_desc' => 'See all keywords your competitors rank for. Find untapped opportunities instantly.',
-    'feature4_title' => 'Revenue Calculator',
-    'feature4_desc' => 'Calculate profit margins with accurate FBA fee estimates for any product.',
+    'feature4_title' => 'Market Analysis',
+    'feature4_desc' => 'Analyze entire product categories and niches to evaluate competition, pricing trends, and market viability.',
     'feature5_title' => 'Difficulty Score',
     'feature5_desc' => 'Know exactly how hard it is to rank for any keyword with our KD score.',
     'feature6_title' => 'Multi-Marketplace',
-    'feature6_desc' => 'Works on Amazon US, Egypt, UK, Germany, and more marketplaces.',
+    'feature6_desc' => 'Works on Amazon Egypt, UAE, and Saudi Arabia marketplaces.',
     
     // Pricing Section
     'pricing_title' => 'Simple, Transparent Pricing',
@@ -56,5 +57,5 @@ return [
     'pro_feature6' => 'Export to CSV',
     
     // Footer
-    'copyright' => '© 2026 Amazon Product Analyzer. All rights reserved.',
+    'copyright' => '© 2026 SelaaScout. All rights reserved.',
 ];

@@ -162,20 +162,44 @@
     <nav>
         <div class="nav-section">
             <div class="nav-section-title">Main</div>
-            <a href="/dashboard" class="nav-item">🏠 Dashboard</a>
-            <a href="/folders" class="nav-item active">📁 My Folders</a>
+            <a href="/dashboard" class="nav-item">
+                <span class="nav-item-icon">🏠</span>
+                Dashboard
+            </a>
+            <a href="/dashboard/folders" class="nav-item active">
+                <span class="nav-item-icon">📁</span>
+                My Folders
+            </a>
         </div>
+        @if(Auth::user()->isAdmin())
         <div class="nav-section">
-            <div class="nav-section-title">Account</div>
-            <a href="/settings" class="nav-item">⚙️ Settings</a>
+            <div class="nav-section-title">Admin</div>
+            <a href="/admin/settings" class="nav-item">
+                <span class="nav-item-icon">⚙️</span>
+                Admin Tools Settings
+            </a>
+            <a href="{{ route('admin.pricing.index') }}" class="nav-item">
+                <span class="nav-item-icon">💳</span>
+                Pricing Plans
+            </a>
+            <a href="{{ route('admin.pricing.subscriptions') }}" class="nav-item">
+                <span class="nav-item-icon">📋</span>
+                Subscriptions
+            </a>
+            <a href="{{ route('admin.users.index') }}" class="nav-item">
+                <span class="nav-item-icon">👥</span>
+                Manage Users
+            </a>
         </div>
+        @endif
     </nav>
     <div class="sidebar-footer">
+        @php $activeSub = Auth::user()->activeSubscription(); @endphp
         <div class="user-card">
             <div class="user-avatar">{{ substr(Auth::user()->name ?? 'U', 0, 1) }}</div>
             <div>
                 <div class="user-name">{{ Auth::user()->name ?? 'User' }}</div>
-                <div class="user-plan">Free Plan</div>
+                <div class="user-plan">{{ $activeSub ? $activeSub->plan->name . ' Plan' : 'Free Plan' }}</div>
             </div>
         </div>
     </div>
@@ -188,10 +212,10 @@
     <div class="breadcrumb">
         <a href="/dashboard">Dashboard</a>
         <span class="sep">›</span>
-        <a href="/folders">My Folders</a>
+        <a href="/dashboard/folders">My Folders</a>
         @foreach($breadcrumb as $crumb)
             <span class="sep">›</span>
-            <a href="/folders/{{ $crumb['id'] }}">{{ $crumb['name'] }}</a>
+            <a href="/dashboard/folders/{{ $crumb['id'] }}">{{ $crumb['name'] }}</a>
         @endforeach
         <span class="sep">›</span>
         <span>{{ $list->name }}</span>
@@ -215,7 +239,7 @@
         </div>
         <div style="display:flex;gap:.75rem;">
             @if($list->folder)
-                <a href="/folders/{{ $list->folder_id }}" class="btn btn-outline btn-sm">← Back to Folder</a>
+                <a href="/dashboard/folders/{{ $list->folder_id }}" class="btn btn-outline btn-sm">← Back to Folder</a>
             @endif
             <button class="btn btn-danger btn-sm" onclick="openModal('delete-list-modal')">🗑️ Delete List</button>
         </div>
@@ -696,7 +720,7 @@
         <p style="margin-bottom:1.5rem;line-height:1.6;color:var(--muted-light)">
             Delete "<strong>{{ $list->name }}</strong>"? All {{ $list->item_count }} saved items will be permanently removed.
         </p>
-        <form method="POST" action="/lists/{{ $list->id }}">
+        <form method="POST" action="/dashboard/lists/{{ $list->id }}">
             @csrf
             @method('DELETE')
             <div class="form-actions">
@@ -859,7 +883,7 @@ function toggleAll(masterCb) {
 // ── Delete single item ────────────────────────────────
 function deleteItem(itemId) {
     if (!confirm('Remove this item?')) return;
-    fetch('/lists/{{ $list->id }}/items/' + itemId, {
+    fetch('/dashboard/lists/{{ $list->id }}/items/' + itemId, {
         method: 'DELETE',
         headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' }
     }).then(r => r.json()).then(data => {
@@ -875,7 +899,7 @@ function removeSelected() {
     const ids = getChecked();
     if (!ids.length) return;
     if (!confirm('Remove ' + ids.length + ' selected item(s)?')) return;
-    fetch('/lists/{{ $list->id }}/items', {
+    fetch('/dashboard/lists/{{ $list->id }}/items', {
         method: 'DELETE',
         headers: { 'X-CSRF-TOKEN': CSRF, 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ item_ids: ids })

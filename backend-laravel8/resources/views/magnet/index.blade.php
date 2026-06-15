@@ -355,7 +355,10 @@
         <div class="nav-links">
             <a href="{{ route('dashboard') }}">Dashboard</a>
             <a href="{{ route('cerebro.folders') }}">Folders</a>
-            <a href="/settings">Settings</a>
+            @if(Auth::user()->isAdmin())
+            <a href="/admin/settings">Admin Tools Settings</a>
+            <a href="{{ route('admin.users.index') }}">Manage Users</a>
+            @endif
         </div>
     </nav>
     

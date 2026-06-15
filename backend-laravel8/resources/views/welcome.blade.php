@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Amazon Product Analyzer - Professional Amazon Analytics</title>
+    <title>SelaaScout - Professional Amazon Analytics</title>
     <meta name="description" content="Helium 10-level analytics for Amazon sellers. Analyze keywords, track BSR, estimate sales, and discover profitable opportunities.">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     @if($isRtl)
@@ -15,11 +15,11 @@
     @endif
     <style>
         :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --primary-light: #818cf8;
-            --secondary: #0ea5e9;
-            --accent: #f59e0b;
+            --primary: #f08804;
+            --primary-dark: #cc7203;
+            --primary-light: #febd69;
+            --secondary: #007185;
+            --accent: #ff9900;
             --success: #10b981;
             --danger: #ef4444;
             --dark: #f8fafc;
@@ -379,50 +379,93 @@
         }
 
         .pricing-grid {
-            max-width: 900px;
+            max-width: 1100px;
             margin: 0 auto;
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 2rem;
+            align-items: start;
         }
 
         .pricing-card {
             background: var(--dark-light);
             border: 1px solid rgba(0,0,0,0.08);
-            border-radius: 20px;
+            border-radius: 24px;
             padding: 2.5rem;
             position: relative;
             overflow: hidden;
             text-align: {{ $isRtl ? 'right' : 'left' }};
+            transition: all 0.3s ease;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.12);
         }
 
         .pricing-card.featured {
             border-color: var(--primary);
-            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.3);
+            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.25);
+            background: linear-gradient(145deg, var(--dark-light) 0%, rgba(99,102,241,0.04) 100%);
         }
 
-        .pricing-card.featured::before {
-            content: 'POPULAR';
+        .pricing-badge {
             position: absolute;
-            top: 20px;
-            {{ $isRtl ? 'left' : 'right' }}: -35px;
+            top: 1.25rem;
+            {{ $isRtl ? 'left' : 'right' }}: 1.25rem;
             background: var(--gradient);
-            padding: 0.25rem 2.5rem;
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding: 0.3rem 0.8rem;
+            border-radius: 50px;
+        }
+
+        .promo-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            color: #d97706;
             font-size: 0.75rem;
             font-weight: 600;
-            transform: rotate({{ $isRtl ? '-45deg' : '45deg' }});
+            padding: 0.25rem 0.65rem;
+            border-radius: 50px;
+            margin-bottom: 0.75rem;
         }
 
         .pricing-name {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .pricing-desc {
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            min-height: 2.5rem;
+        }
+
+        .pricing-price-wrap {
+            margin-bottom: 1.75rem;
         }
 
         .pricing-price {
             font-size: 3rem;
             font-weight: 800;
-            margin-bottom: 1.5rem;
+            line-height: 1;
+        }
+
+        .pricing-price-orig {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--gray);
+            text-decoration: line-through;
+            margin-{{ $isRtl ? 'left' : 'right' }}: 0.5rem;
         }
 
         .pricing-price span {
@@ -437,17 +480,33 @@
         }
 
         .pricing-features li {
-            padding: 0.5rem 0;
+            padding: 0.55rem 0;
             color: var(--gray-light);
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 0.75rem;
+            font-size: 0.95rem;
+            border-bottom: 1px solid rgba(0,0,0,0.04);
         }
 
-        .pricing-features li::before {
-            content: '✓';
+        .pricing-features li:last-child { border-bottom: none; }
+
+        .pricing-features li .check {
             color: var(--success);
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 0.1rem;
+        }
+
+        .pricing-features li .tool-limit {
+            margin-{{ $isRtl ? 'right' : 'left' }}: auto;
+            font-size: 0.8rem;
             font-weight: 600;
+            color: var(--primary);
+            background: rgba(99,102,241,0.08);
+            padding: 0.15rem 0.5rem;
+            border-radius: 50px;
+            white-space: nowrap;
         }
 
         /* Footer */
@@ -463,6 +522,7 @@
         }
 
         /* Responsive */
+
         @media (max-width: 968px) {
             .hero-container {
                 grid-template-columns: 1fr;
@@ -507,8 +567,8 @@
     <!-- Navbar -->
     <nav class="navbar">
         <a href="/" class="logo">
-            <div class="logo-icon">📊</div>
-            Amazon Analyzer
+            <img src="{{ asset('images/logo.png') }}" alt="SelaaScout Logo" style="height: 40px; width: 40px; border-radius: 10px; object-fit: contain;">
+            SelaaScout
         </a>
         <div class="nav-links">
             <a href="#features">{{ __('site.features') }}</a>
@@ -610,7 +670,7 @@
                 <p>{{ __('site.feature3_desc') }}</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">💰</div>
+                <div class="feature-icon">📊</div>
                 <h3>{{ __('site.feature4_title') }}</h3>
                 <p>{{ __('site.feature4_desc') }}</p>
             </div>
@@ -633,31 +693,118 @@
             <h2>{{ __('site.pricing_title') }}</h2>
             <p>{{ __('site.pricing_subtitle') }}</p>
         </div>
+
+        @php
+            $toolLabels = [
+                'market_analysis'  => $isRtl ? 'تحليل السوق'          : 'Market Analysis',
+                'keyword_magnet'   => $isRtl ? 'بحث الكلمات'          : 'Keyword Magnet',
+                'reverse_asin'     => $isRtl ? 'البحث العكسي ASIN'    : 'Reverse ASIN',
+                // 'fba_calculator'   => $isRtl ? 'حاسبة FBA'            : 'FBA Calculator',
+                'cerebro'          => $isRtl ? 'محلل المنافسين'        : 'Competitor Keyword Analyzer',
+                'analyze_product'  => $isRtl ? 'تحليل المنتج'         : 'Analyze Product',
+                'search_volume'    => $isRtl ? 'حجم البحث'            : 'Search Volume',
+            ];
+            $monthLabel = $isRtl ? '/شهر' : '/mo';
+            $unlimitedLabel = $isRtl ? 'غير محدود' : 'Unlimited';
+            $popularLabel   = $isRtl ? 'الأكثر شيوعاً' : 'POPULAR';
+            $promoLabel     = $isRtl ? '🔥 عرض محدود' : '🔥 Limited Offer';
+        @endphp
+
         <div class="pricing-grid">
-            <div class="pricing-card">
-                <div class="pricing-name">{{ __('site.free') }}</div>
-                <div class="pricing-price">$0 <span>{{ __('site.month') }}</span></div>
-                <ul class="pricing-features">
-                    <li>{{ __('site.free_feature1') }}</li>
-                    <li>{{ __('site.free_feature2') }}</li>
-                    <li>{{ __('site.free_feature3') }}</li>
-                    <li>{{ __('site.free_feature4') }}</li>
-                </ul>
-                <a href="/register" class="btn btn-outline" style="width: 100%; text-align: center;">{{ __('site.get_started') }}</a>
-            </div>
-            <div class="pricing-card featured">
-                <div class="pricing-name">{{ __('site.pro') }}</div>
-                <div class="pricing-price">$29 <span>{{ __('site.month') }}</span></div>
-                <ul class="pricing-features">
-                    <li>{{ __('site.pro_feature1') }}</li>
-                    <li>{{ __('site.pro_feature2') }}</li>
-                    <li>{{ __('site.pro_feature3') }}</li>
-                    <li>{{ __('site.pro_feature4') }}</li>
-                    <li>{{ __('site.pro_feature5') }}</li>
-                    <li>{{ __('site.pro_feature6') }}</li>
-                </ul>
-                <a href="/register?plan=pro" class="btn btn-primary" style="width: 100%; text-align: center;">{{ __('site.start_free_trial') }}</a>
-            </div>
+            @forelse($plans ?? [] as $plan)
+                @php
+                    $isPromo    = $plan->isOnPromo();
+                    $effPrice   = $plan->effectivePrice();
+                    $isFree     = $plan->isFree();
+                    $planLimits = $plan->limits ?? [];
+                    $cta        = Auth::check() 
+                        ? ($isFree ? '/dashboard' : route('subscription.pay', $plan->id))
+                        : ($isFree ? '/register' : '/register?plan=' . $plan->slug);
+                @endphp
+
+                <div class="pricing-card {{ $plan->is_featured ? 'featured' : '' }}">
+
+                    @if($plan->is_featured)
+                        <div class="pricing-badge">{{ $popularLabel }}</div>
+                    @endif
+
+                    @if($isPromo)
+                        <div class="promo-badge">{{ $promoLabel }}</div>
+                    @endif
+
+                    <div class="pricing-name">{{ $plan->name }}</div>
+                    <div class="pricing-desc">{{ $plan->description }}</div>
+
+                    <div class="pricing-price-wrap">
+                        @if($isPromo)
+                            <span class="pricing-price-orig">${{ number_format($plan->price, 0) }}</span>
+                        @endif
+                        <span class="pricing-price">
+                            ${{ number_format($effPrice, 0) }}
+                            <span>{{ $monthLabel }}</span>
+                        </span>
+                    </div>
+
+                    <ul class="pricing-features">
+                        @foreach($toolLabels as $toolKey => $toolLabel)
+                            @php
+                                $limitVal = isset($planLimits[$toolKey]) ? (int)$planLimits[$toolKey] : -1;
+                                $limitStr = ($limitVal === -1) ? $unlimitedLabel : number_format($limitVal) . $monthLabel;
+                            @endphp
+                            <li>
+                                <span class="check">✓</span>
+                                <span>{{ $toolLabel }}</span>
+                                <span class="tool-limit">{{ $limitStr }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+
+                    @if($isFree)
+                        <a href="{{ $cta }}" class="btn btn-outline" style="width:100%;text-align:center;display:block;">
+                            {{ __('site.get_started') }}
+                        </a>
+                    @else
+                        <a href="{{ $cta }}" class="btn btn-primary" style="width:100%;text-align:center;display:block;">
+                            {{ ($plan->trial_days ?? 0) > 0 ? __('site.start_free_trial') : __('site.choose_plan') }}
+                        </a>
+                    @endif
+                </div>
+            @empty
+                {{-- Fallback when no plans exist in DB yet --}}
+                <div class="pricing-card">
+                    <div class="pricing-name">{{ __('site.free') }}</div>
+                    <div class="pricing-price-wrap">
+                        <span class="pricing-price">$0 <span>{{ $monthLabel }}</span></span>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><span class="check">✓</span> {{ __('site.free_feature1') }}</li>
+                        <li><span class="check">✓</span> {{ __('site.free_feature2') }}</li>
+                        <li><span class="check">✓</span> {{ __('site.free_feature3') }}</li>
+                        <li><span class="check">✓</span> {{ __('site.free_feature4') }}</li>
+                    </ul>
+                    <a href="/register" class="btn btn-outline" style="width:100%;text-align:center;display:block;">
+                        {{ __('site.get_started') }}
+                    </a>
+                </div>
+                <div class="pricing-card featured">
+                    <div class="pricing-badge">{{ $popularLabel }}</div>
+                    <div class="pricing-name">{{ __('site.pro') }}</div>
+                    <div class="pricing-price-wrap">
+                        <span class="pricing-price">$29 <span>{{ $monthLabel }}</span></span>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><span class="check">✓</span> {{ __('site.pro_feature1') }}</li>
+                        <li><span class="check">✓</span> {{ __('site.pro_feature2') }}</li>
+                        <li><span class="check">✓</span> {{ __('site.pro_feature3') }}</li>
+                        <li><span class="check">✓</span> {{ __('site.pro_feature4') }}</li>
+                        <li><span class="check">✓</span> {{ __('site.pro_feature5') }}</li>
+                        <li><span class="check">✓</span> {{ __('site.pro_feature6') }}</li>
+                    </ul>
+                    <a href="/register?plan=pro" class="btn btn-primary" style="width:100%;text-align:center;display:block;">
+                        {{ __('site.start_free_trial') }}
+                    </a>
+                </div>
+            @endforelse
         </div>
     </section>
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Settings - Amazon Product Analyzer</title>
+    <title>Admin Tools Settings - Amazon Product Analyzer</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -12,8 +12,8 @@
             --line: rgba(0, 0, 0, 0.08);
             --text: #0f172a;
             --muted: #475569;
-            --primary: #6366f1;
-            --primary-hover: #4f46e5;
+            --primary: #f08804;
+            --primary-hover: #cc7203;
             --success: #10b981;
             --warning: #f59e0b;
         }
@@ -388,7 +388,7 @@
     <main class="layout">
         <div class="topbar">
             <div>
-                <h1>Admin Settings</h1>
+                <h1>Admin Tools Settings</h1>
                 <p class="subtitle">Fine-tune feature permissions, scraper delay limits, and testing behaviors.</p>
             </div>
             <a class="back" href="/dashboard">← Back to Dashboard</a>
@@ -406,6 +406,7 @@
             <button type="button" class="tab-btn" data-tab="reverse">🔑 Reverse ASIN</button>
             <button type="button" class="tab-btn" data-tab="magnet">🧲 Keyword Magnet</button>
             <button type="button" class="tab-btn" data-tab="testmode">🛠️ Test Mode</button>
+
         </div>
 
         <form method="POST" action="{{ route('admin.settings.update') }}">
@@ -693,6 +694,49 @@
                 <button type="submit" class="btn-save">Save Settings</button>
             </div>
         </form>
+
+        {{-- ───── InstaPay Payment Settings ───── --}}
+        @php
+            $instapayRows = \DB::table('app_settings')
+                ->whereIn('key', ['instapay_username', 'instapay_phone', 'instapay_instructions'])
+                ->get()->keyBy('key');
+        @endphp
+        <div style="margin-top:32px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <div>
+                    <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:4px;">💳 InstaPay Payment Settings</h2>
+                    <p style="color:var(--muted);font-size:13px;">Configure the payment details shown to users during the subscription checkout.</p>
+                </div>
+
+            </div>
+            <form method="POST" action="{{ route('admin.pricing.instapay.update') }}" style="background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.05);">
+                @csrf
+                <div class="setting">
+                    <div>
+                        <div class="label">InstaPay Username</div>
+                        <div class="description">The InstaPay address users will send payment to (e.g. myshop@instapay)</div>
+                    </div>
+                    <input type="text" name="instapay_username" value="{{ $instapayRows->get('instapay_username')?->value ?? 'amazon.analyzer@instapay' }}" style="max-width:240px;">
+                </div>
+                <div class="setting">
+                    <div>
+                        <div class="label">InstaPay Phone (optional)</div>
+                        <div class="description">Phone number registered with InstaPay — shown as a secondary payment option.</div>
+                    </div>
+                    <input type="text" name="instapay_phone" value="{{ $instapayRows->get('instapay_phone')?->value ?? '' }}" style="max-width:200px;" placeholder="e.g. 01012345678">
+                </div>
+                <div class="setting">
+                    <div>
+                        <div class="label">Payment Instructions</div>
+                        <div class="description">Instructions shown to the user on the checkout page after they select a plan.</div>
+                    </div>
+                    <input type="text" name="instapay_instructions" value="{{ $instapayRows->get('instapay_instructions')?->value ?? '' }}" placeholder="Send the exact amount and upload a screenshot.">
+                </div>
+                <div class="actions">
+                    <button type="submit" class="btn-save">Save Payment Settings</button>
+                </div>
+            </form>
+        </div>
     </main>
 
     <!-- Tab selection vanilla JS script -->

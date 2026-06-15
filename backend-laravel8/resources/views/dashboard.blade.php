@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Amazon Product Analyzer</title>
+    <title>Dashboard - SelaaScout</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --primary-light: #818cf8;
-            --secondary: #0ea5e9;
+            --primary: #f08804;
+            --primary-dark: #cc7203;
+            --primary-light: #febd69;
+            --secondary: #007185;
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
@@ -466,14 +466,49 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        .alert-banner {
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 500;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .alert-banner-warning {
+            background: #fffbeb;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+        .alert-banner-info {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+        .alert-banner-success {
+            background: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+        }
+        .alert-banner a {
+            color: inherit;
+            font-weight: 700;
+            text-decoration: underline;
+        }
+        .alert-banner a:hover {
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
     <!-- Sidebar -->
     <aside class="sidebar">
         <a href="/" class="sidebar-logo">
-            <div class="icon">📊</div>
-            Amazon Analyzer
+            <img src="{{ asset('images/logo.png') }}" alt="SelaaScout Logo" style="height: 40px; width: 40px; border-radius: 10px; object-fit: contain;">
+            SelaaScout
         </a>
 
         <nav>
@@ -483,27 +518,48 @@
                     <span class="nav-item-icon">🏠</span>
                     Dashboard
                 </a>
-                <a href="/folders" class="nav-item">
+                <a href="/dashboard/folders" class="nav-item">
                     <span class="nav-item-icon">📁</span>
                     My Folders
                 </a>
+                @if(!Auth::user()->isAdmin())
+                <a href="/subscription/upgrade" class="nav-item">
+                    <span class="nav-item-icon">💳</span>
+                    Upgrade Plan
+                </a>
+                @endif
             </div>
 
+            @if(Auth::user()->isAdmin())
             <div class="nav-section">
-                <div class="nav-section-title">Account</div>
-                <a href="/settings" class="nav-item">
+                <div class="nav-section-title">Admin</div>
+                <a href="/admin/settings" class="nav-item">
                     <span class="nav-item-icon">⚙️</span>
-                    Settings
+                    Admin Tools Settings
+                </a>
+                <a href="{{ route('admin.pricing.index') }}" class="nav-item">
+                    <span class="nav-item-icon">💳</span>
+                    Pricing Plans
+                </a>
+                <a href="{{ route('admin.pricing.subscriptions') }}" class="nav-item">
+                    <span class="nav-item-icon">📋</span>
+                    Subscriptions
+                </a>
+                <a href="{{ route('admin.users.index') }}" class="nav-item">
+                    <span class="nav-item-icon">👥</span>
+                    Manage Users
                 </a>
             </div>
+            @endif
         </nav>
 
         <div class="sidebar-footer">
+            @php $activeSub = Auth::user()->activeSubscription(); @endphp
             <div class="user-card">
                 <div class="user-avatar">{{ substr(Auth::user()->name ?? 'U', 0, 1) }}</div>
                 <div class="user-info">
                     <div class="user-name">{{ Auth::user()->name ?? 'User' }}</div>
-                    <div class="user-plan">Free Plan</div>
+                    <div class="user-plan">{{ $activeSub ? $activeSub->plan->name . ' Plan' : 'Free Plan' }}</div>
                 </div>
             </div>
         </div>
@@ -520,6 +576,39 @@
                 </form>
             </div>
         </div>
+
+        <!-- Alert Banners -->
+        @if(session('success'))
+            <div class="alert-banner alert-banner-success">
+                <span>✅ {{ session('success') }}</span>
+            </div>
+        @endif
+
+        @if(!Auth::user()->isAdmin())
+            @php
+                $latestSub = Auth::user()->subscriptions()->latest()->first();
+            @endphp
+
+            @if($latestSub && $latestSub->status === \App\Models\Subscription::STATUS_PENDING_APPROVAL)
+                <div class="alert-banner" style="background:#fffbeb; border-color:#fde68a; color:#b45309; border: 1px solid #fde68a;">
+                    <span>⏳ Your payment proof for the <strong>{{ $latestSub->plan->name }}</strong> plan is pending admin approval. It will be activated shortly.</span>
+                </div>
+            @elseif($latestSub && $latestSub->status === \App\Models\Subscription::STATUS_REJECTED)
+                <div class="alert-banner alert-banner-warning" style="background:#fee2e2; border-color:#fecaca; color:#991b1b;">
+                    <span>❌ Your payment proof for the <strong>{{ $latestSub->plan->name }}</strong> plan was rejected by the admin. Please <a href="/subscription/upgrade">submit a new request</a>.</span>
+                </div>
+            @elseif($latestSub && $latestSub->status === \App\Models\Subscription::STATUS_EXPIRED)
+                <div class="alert-banner alert-banner-warning">
+                    <span>⚠️ Your subscription/free trial of the <strong>{{ $latestSub->plan->name }}</strong> plan has ended. You have been reverted to the Free Plan.</span>
+                    <a href="/subscription/upgrade" class="btn btn-outline" style="border-color: #b45309; color: #b45309; padding: 6px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; text-decoration: none;">Upgrade Plan</a>
+                </div>
+            @elseif(!$activeSub)
+                <div class="alert-banner alert-banner-info">
+                    <span>🚀 You are currently on the <strong>Free Plan</strong>. Upgrade to access higher limits for keyword and product analysis.</span>
+                    <a href="/subscription/upgrade" class="btn btn-outline" style="border-color: #1d4ed8; color: #1d4ed8; padding: 6px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; text-decoration: none;">Upgrade Now</a>
+                </div>
+            @endif
+        @endif
 
         <!-- Extension Banner -->
         <div class="extension-banner">
@@ -560,8 +649,16 @@
                 <div class="stat-header">
                     <div class="stat-icon">⏱️</div>
                 </div>
-                <div class="stat-value">7</div>
-                <div class="stat-label">Days Left in Trial</div>
+                @php
+                    $daysLeft = 0;
+                    $isTrial = false;
+                    if ($activeSub && $activeSub->current_period_end) {
+                        $daysLeft = max(0, (int) now()->diffInDays($activeSub->current_period_end, false));
+                        $isTrial = $activeSub->plan && $activeSub->plan->trial_days > 0;
+                    }
+                @endphp
+                <div class="stat-value">{{ $daysLeft }}</div>
+                <div class="stat-label">{{ $isTrial ? 'Days Left in Trial' : 'Days Left in Subscription' }}</div>
             </div>
         </div>
 
@@ -571,16 +668,18 @@
                 <h2 class="card-title">Quick Actions</h2>
             </div>
             <div class="quick-actions">
-                <a href="/folders" class="quick-action">
+                <a href="/dashboard/folders" class="quick-action">
                     <span class="quick-action-icon">📁</span>
                     <span class="quick-action-title">My Folders</span>
                     <span class="quick-action-desc">Organize saved keywords, products &amp; analyses</span>
                 </a>
-                <a href="/settings" class="quick-action">
+                @if(Auth::user()->isAdmin())
+                <a href="/admin/settings" class="quick-action">
                     <span class="quick-action-icon">⚙️</span>
-                    <span class="quick-action-title">Account Settings</span>
+                    <span class="quick-action-title">Admin Tools Settings</span>
                     <span class="quick-action-desc">Configure API settings and options</span>
                 </a>
+                @endif
             </div>
         </div>
 

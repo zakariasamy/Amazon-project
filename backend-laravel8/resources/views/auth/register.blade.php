@@ -7,10 +7,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --primary-light: #818cf8;
-            --secondary: #0ea5e9;
+            --primary: #f08804;
+            --primary-dark: #cc7203;
+            --primary-light: #febd69;
+            --secondary: #007185;
             --success: #10b981;
             --danger: #ef4444;
             --dark: #f8fafc;
@@ -417,8 +417,15 @@
                 Already have an account? <a href="/login">Sign in</a>
             </div>
 
+            @php
+                $planSlug = request()->query('plan');
+                $plan = $planSlug ? \App\Models\PricingPlan::where('slug', $planSlug)->where('is_active', true)->first() : null;
+                $trialDays = $plan ? (int)$plan->trial_days : 0;
+            @endphp
             <div class="benefits">
-                <span class="benefit-tag">✓ Free 7-day trial</span>
+                @if($trialDays > 0)
+                    <span class="benefit-tag">✓ Free {{ $trialDays }}-day trial</span>
+                @endif
                 <span class="benefit-tag">✓ No credit card required</span>
                 <span class="benefit-tag">✓ Cancel anytime</span>
             </div>

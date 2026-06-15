@@ -1,6 +1,6 @@
 # Implementation Plan: SaaS Pricing Plans, Tool Limits, Upgrades & Payment Proofs
 
-This plan outlines the architecture and implementation for pricing plans, customizable tool limits, upgrades with limit carry-overs, monthly/manual limit resets, and a temporary payment proof upload system (via InstaPay).
+This plan outlines the architecture and implementation for pricing plans, customizable tool limits, upgrades with limit carry-overs, monthly/manual limit resets, a temporary payment proof upload system (via InstaPay), and dynamic homepage integration to display plans to visitors.
 
 ---
 
@@ -104,6 +104,13 @@ erDiagram
 - **Admin Dashboard Review**:
   - The admin can view a list of pending uploads, inspect the screenshot, write admin notes, and click **Approve** (activates subscription and updates user limits) or **Reject** (notifies user).
 
+### 7. Dynamic Homepage Pricing Section
+- **Dynamic Fetching**: Instead of hardcoding pricing plans, the application will fetch active plans from the database.
+- **Promo Prices Display**: If a plan is currently running a promotional offer (within the `promo_start_at` and `promo_end_at` dates), the homepage will visually strikethrough the base price and highlight the promo price.
+- **Plan Limits & Details**: Key limits (e.g. usage count for each of the 7 tools, or "Unlimited") are formatted and displayed directly on the plan card features.
+- **CTA Actions**: Each card will link to the registration/checkout page with the selected plan (e.g., `/register?plan=pro` or using the plan's ID).
+- **Localization**: Supports Arabic (RTL) and English translations for plan names, features, and limits.
+
 ---
 
 ## Proposed Technical Tasks
@@ -124,10 +131,12 @@ erDiagram
 ### 4. Admin Controllers & Views
 - Create `AdminPricingController` to manage plans.
 - Create `AdminSubscriptionController` to review screenshots, approve/reject payments, and manually reset limits.
+- Update the homepage view (`welcome.blade.php`) to fetch active pricing plans dynamically from the database and render them with support for the primary design aesthetic (responsive grid, hover cards, highlight badges, and localized labels).
 
-### 5. API Endpoints
+### 5. API Endpoints & Routes
 - `GET /api/subscription/status` - Returns current plan limits and remaining usage.
 - `POST /api/subscription/payment-proof` - Allows uploading screenshot.
+- Modify web routes to pass active pricing plans (or use a shared view composer/API) directly to the home page route.
 
 ---
 
@@ -138,7 +147,12 @@ erDiagram
   1. Lazy monthly resets activate correctly on expired periods.
   2. Upgrading plans adds the remaining balance to the new limit.
   3. Unlimited tools bypass count checks.
+  4. Active pricing plans retrieval correctly filters out inactive plans or expired promotions.
 
 ### Manual Verification
 - Testing checkout flow by uploading sample images.
 - Approving payment via Admin Panel and verifying limits are correctly granted.
+- Homepage pricing verification:
+  - Add test pricing plans with and without promo periods to the database.
+  - Load the home page and verify plans are rendered dynamically.
+  - Ensure correct layout structure, RTL support, and pricing display (base price vs. promo price).

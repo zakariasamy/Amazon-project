@@ -141,20 +141,44 @@
     <nav>
         <div class="nav-section">
             <div class="nav-section-title">Main</div>
-            <a href="/dashboard" class="nav-item">🏠 Dashboard</a>
-            <a href="/folders" class="nav-item active">📁 My Folders</a>
+            <a href="/dashboard" class="nav-item">
+                <span class="nav-item-icon">🏠</span>
+                Dashboard
+            </a>
+            <a href="/dashboard/folders" class="nav-item active">
+                <span class="nav-item-icon">📁</span>
+                My Folders
+            </a>
         </div>
+        @if(Auth::user()->isAdmin())
         <div class="nav-section">
-            <div class="nav-section-title">Account</div>
-            <a href="/settings" class="nav-item">⚙️ Settings</a>
+            <div class="nav-section-title">Admin</div>
+            <a href="/admin/settings" class="nav-item">
+                <span class="nav-item-icon">⚙️</span>
+                Admin Tools Settings
+            </a>
+            <a href="{{ route('admin.pricing.index') }}" class="nav-item">
+                <span class="nav-item-icon">💳</span>
+                Pricing Plans
+            </a>
+            <a href="{{ route('admin.pricing.subscriptions') }}" class="nav-item">
+                <span class="nav-item-icon">📋</span>
+                Subscriptions
+            </a>
+            <a href="{{ route('admin.users.index') }}" class="nav-item">
+                <span class="nav-item-icon">👥</span>
+                Manage Users
+            </a>
         </div>
+        @endif
     </nav>
     <div class="sidebar-footer">
+        @php $activeSub = Auth::user()->activeSubscription(); @endphp
         <div class="user-card">
             <div class="user-avatar">{{ substr(Auth::user()->name ?? 'U', 0, 1) }}</div>
             <div>
                 <div class="user-name">{{ Auth::user()->name ?? 'User' }}</div>
-                <div class="user-plan">Free Plan</div>
+                <div class="user-plan">{{ $activeSub ? $activeSub->plan->name . ' Plan' : 'Free Plan' }}</div>
             </div>
         </div>
     </div>
@@ -167,11 +191,11 @@
     <div class="breadcrumb">
         <a href="/dashboard">Dashboard</a>
         <span class="sep">›</span>
-        <a href="/folders">My Folders</a>
+        <a href="/dashboard/folders">My Folders</a>
         @foreach($breadcrumb as $crumb)
             <span class="sep">›</span>
             @if(!$loop->last)
-                <a href="/folders/{{ $crumb['id'] }}">{{ $crumb['name'] }}</a>
+                <a href="/dashboard/folders/{{ $crumb['id'] }}">{{ $crumb['name'] }}</a>
             @else
                 <span>{{ $crumb['name'] }}</span>
             @endif
@@ -210,7 +234,7 @@
         @if($children->count() > 0)
             <div class="folders-grid">
                 @foreach($children as $child)
-                    <a href="/folders/{{ $child->id }}" class="folder-card" style="--sub-color:{{ $child->color }}">
+                    <a href="/dashboard/folders/{{ $child->id }}" class="folder-card" style="--sub-color:{{ $child->color }}">
                         <div class="folder-card-actions">
                             <button class="icon-btn icon-btn-edit" onclick="event.preventDefault(); openEditModal({{ $child->id }}, '{{ addslashes($child->name) }}', '{{ $child->color }}', '{{ addslashes($child->description ?? '') }}')" title="Rename">✏️</button>
                             <button class="icon-btn icon-btn-delete" onclick="event.preventDefault(); confirmDelete({{ $child->id }}, '{{ addslashes($child->name) }}')" title="Delete">🗑️</button>
@@ -243,7 +267,7 @@
         @if($lists->count() > 0)
             <div class="lists-grid">
                 @foreach($lists as $list)
-                    <a href="/lists/{{ $list->id }}" class="list-card">
+                    <a href="/dashboard/lists/{{ $list->id }}" class="list-card">
                         <div class="list-card-delete">
                             <button class="icon-btn icon-btn-delete" onclick="event.preventDefault(); confirmDeleteList({{ $list->id }}, '{{ addslashes($list->name) }}')" title="Delete list">🗑️</button>
                         </div>
@@ -277,7 +301,7 @@
             <span class="modal-title">📁 New Sub-Folder</span>
             <button class="modal-close" onclick="closeModal('create-subfolder-modal')">×</button>
         </div>
-        <form method="POST" action="/folders">
+        <form method="POST" action="/dashboard/folders">
             @csrf
             <input type="hidden" name="parent_id" value="{{ $folder->id }}">
             <div class="form-group">
@@ -312,7 +336,7 @@
             <span class="modal-title">📋 New List</span>
             <button class="modal-close" onclick="closeModal('create-list-modal')">×</button>
         </div>
-        <form method="POST" action="/folders/{{ $folder->id }}/lists">
+        <form method="POST" action="/dashboard/folders/{{ $folder->id }}/lists">
             @csrf
             <div class="form-group">
                 <label class="form-label">List Name *</label>
@@ -429,7 +453,7 @@ function selectColor(el, color, inputId) {
     document.getElementById(inputId).value = color;
 }
 function openEditModal(id, name, color, description) {
-    document.getElementById('edit-folder-form').action = '/folders/' + id;
+    document.getElementById('edit-folder-form').action = '/dashboard/folders/' + id;
     document.getElementById('edit-folder-name').value = name;
     document.getElementById('edit-folder-desc').value = description;
     document.getElementById('edit-color-input').value = color;
@@ -440,12 +464,12 @@ function openEditModal(id, name, color, description) {
 }
 function confirmDelete(id, name) {
     document.getElementById('delete-folder-name').textContent = '"' + name + '"';
-    document.getElementById('delete-folder-form').action = '/folders/' + id;
+    document.getElementById('delete-folder-form').action = '/dashboard/folders/' + id;
     openModal('delete-folder-modal');
 }
 function confirmDeleteList(id, name) {
     document.getElementById('delete-list-name').textContent = '"' + name + '"';
-    document.getElementById('delete-list-form').action = '/lists/' + id;
+    document.getElementById('delete-list-form').action = '/dashboard/lists/' + id;
     openModal('delete-list-modal');
 }
 </script>
