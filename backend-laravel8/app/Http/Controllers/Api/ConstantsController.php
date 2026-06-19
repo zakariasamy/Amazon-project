@@ -80,6 +80,10 @@ class ConstantsController extends Controller
 
             $result = [];
             foreach ($rows as $row) {
+                // Filter out sensitive Google Ads keys to prevent exposing them in public settings endpoint
+                if (strpos($row->key, 'google_ads_') === 0) {
+                    continue;
+                }
                 // Cast value based on type
                 $value = $row->value;
                 switch ($row->type) {
@@ -134,6 +138,7 @@ class ConstantsController extends Controller
             'feature_reverse_asin_enabled' => true,
             'feature_fba_calculator_enabled' => true,
             'feature_keyword_magnet_enabled' => true,
+            'feature_google_keyword_planner_enabled' => true,
         ];
 
         return response()->json([

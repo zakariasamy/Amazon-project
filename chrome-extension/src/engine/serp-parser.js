@@ -188,7 +188,7 @@ class SerpParser {
             const converted = this.convertNumerals(str);
             // Replace common Arabic separators
             const normalized = converted.replace(/٬/g, '').replace(/٫/g, '.').trim();
-            
+
             // Avoid matching rating values e.g. "4.5 out of 5 stars" or "4.5 من 5 نجوم"
             if (normalized.match(/out of 5|من 5|star|نجوم/i)) {
                 return 0;
@@ -258,7 +258,7 @@ class SerpParser {
             // Skip if it contains price or brand related keywords
             const text = el.textContent.trim();
             if (text.match(/EGP|USD|\$|brand|ماركة/i)) continue;
-            
+
             const val = parseNumberFromString(text);
             if (val > 0) return val;
         }
@@ -805,8 +805,8 @@ class SerpParser {
                         // Get the first ranking (main category)
                         const firstItem = bsrTd.querySelector('.a-list-item span, span');
                         if (firstItem) {
-                            const text = firstItem.textContent;
-                            const match = text.match(/#([,\d]+)\s+(?:in|في)\s+([^(\n]+)/i);
+                            const text = this.convertNumerals(firstItem.textContent);
+                            const match = text.match(/(?:#|رقم)\s*([\d,]+)\s+(?:in|في)\s+([^(\n]+)/i);
                             if (match) {
                                 const bsr = parseInt(match[1].replace(/,/g, ''), 10);
                                 let category = match[2]?.trim() || 'Unknown';
@@ -816,8 +816,8 @@ class SerpParser {
                             }
                         }
                         // Maybe direct text content has BSR
-                        const tdText = bsrTd.textContent || '';
-                        const tdMatch = tdText.match(/#([,\d]+)\s+(?:in|في)\s+([^(\n]+)/i);
+                        const tdText = this.convertNumerals(bsrTd.textContent || '');
+                        const tdMatch = tdText.match(/(?:#|رقم)\s*([\d,]+)\s+(?:in|في)\s+([^(\n]+)/i);
                         if (tdMatch) {
                             const bsr = parseInt(tdMatch[1].replace(/,/g, ''), 10);
                             let category = tdMatch[2]?.trim() || 'Unknown';
@@ -834,8 +834,8 @@ class SerpParser {
             for (const bsrList of bsrLists) {
                 const items = bsrList.querySelectorAll('li .a-list-item span, li span');
                 for (const item of items) {
-                    const text = item.textContent;
-                    const match = text.match(/#([,\d]+)\s+(?:in|في)\s+([^(\n]+)/i);
+                    const text = this.convertNumerals(item.textContent);
+                    const match = text.match(/(?:#|رقم)\s*([\d,]+)\s+(?:in|في)\s+([^(\n]+)/i);
                     if (match) {
                         const bsr = parseInt(match[1].replace(/,/g, ''), 10);
                         let category = match[2]?.trim() || 'Unknown';
@@ -863,10 +863,10 @@ class SerpParser {
             for (const selector of selectors) {
                 const el = doc.querySelector(selector);
                 if (el) {
-                    const text = el.textContent;
+                    const text = this.convertNumerals(el.textContent);
                     // Match patterns like "#1,234 in Kitchen", "رقم 1,234 في المطبخ"
                     // Capture both the number and the category
-                    const match = text.match(/#([,\d]+)\s+(?:in|في)\s+([^(\n#]+)/i);
+                    const match = text.match(/(?:#|رقم)\s*([\d,]+)\s+(?:in|في)\s+([^(\n#]+)/i);
                     if (match) {
                         const bsr = parseInt(match[1].replace(/,/g, ''), 10);
                         let category = match[2]?.trim() || 'Unknown';
@@ -879,9 +879,9 @@ class SerpParser {
             }
 
             // Method 4: Fallback - search entire body for BSR pattern
-            const bodyText = doc.body?.textContent || '';
+            const bodyText = this.convertNumerals(doc.body?.textContent || '');
             // Look for "Best Sellers Rank:" followed by a number
-            const bsrMatch = bodyText.match(/(?:Best Sellers Rank|تصنيف الأفضل مبيعاً)[:\s]+#?([,\d]+)\s+(?:in|في)\s+([^(\n#]+)/i);
+            const bsrMatch = bodyText.match(/(?:Best Sellers Rank|تصنيف الأفضل مبيعاً)[:\s]+(?:#|رقم)?\s*([\d,]+)\s+(?:in|في)\s+([^(\n#]+)/i);
             if (bsrMatch) {
                 const bsr = parseInt(bsrMatch[1].replace(/,/g, ''), 10);
                 let category = bsrMatch[2]?.trim() || 'Unknown';

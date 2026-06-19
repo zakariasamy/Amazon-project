@@ -13,16 +13,19 @@ class DashboardFolderController extends Controller
     /**
      * Root folders page — shows all top-level folders and lists.
      */
-    public function index()
+    public function index(Request $request)
     {
+        $marketplace = $request->query('marketplace', 'amazon.eg');
+
         $folders = DashboardFolder::where('user_id', Auth::id())
+            ->where('marketplace', $marketplace)
             ->whereNull('parent_id')
             ->withCount('children')
             ->with('lists')
             ->orderBy('name')
             ->get();
 
-        return view('folders.index', compact('folders'));
+        return view('folders.index', compact('folders', 'marketplace'));
     }
 
     /**
@@ -59,6 +62,7 @@ class DashboardFolderController extends Controller
             'color'       => 'nullable|string|max:20',
             'description' => 'nullable|string|max:500',
             'parent_id'   => 'nullable|integer|exists:dashboard_folders,id',
+            'marketplace' => 'nullable|string|max:30',
         ]);
 
         if ($validator->fails()) {
@@ -82,6 +86,7 @@ class DashboardFolderController extends Controller
             'name'        => $request->name,
             'color'       => $request->color ?? '#6366f1',
             'description' => $request->description,
+            'marketplace' => $request->marketplace ?? 'amazon.eg',
         ]);
 
         if ($request->expectsJson()) {
@@ -105,12 +110,19 @@ class DashboardFolderController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
+            return back()->withErrors($validator)->withInput();
         }
 
         $folder->update($request->only(['name', 'color', 'description']));
 
-        return response()->json(['success' => true, 'folder' => $folder]);
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'folder' => $folder]);
+        }
+
+        return redirect()->back()->with('success', 'Folder updated successfully.');
     }
 
     /**

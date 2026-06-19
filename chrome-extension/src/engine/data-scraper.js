@@ -47,6 +47,7 @@ class DataScraper {
             // Additional
             url: window.location.href,
             marketplace: this.marketplace,
+            images: this.extractImages(),
             scrapedAt: new Date().toISOString()
         };
     }
@@ -154,7 +155,7 @@ class DataScraper {
     }
 
     extractBSR() {
-        // Convert Arabic numbers to Latin
+        // Convert Arabic numbers to Latin and normalize separators
         const arabicToLatin = (str) => {
             const arabicNums = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
             const latinNums = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
@@ -162,6 +163,8 @@ class DataScraper {
             arabicNums.forEach((arabic, index) => {
                 result = result.replace(new RegExp(arabic, 'g'), latinNums[index]);
             });
+            // Normalize Arabic commas to English commas
+            result = result.replace(/،/g, ',').replace(/٬/g, ',');
             return result;
         };
 
@@ -174,8 +177,8 @@ class DataScraper {
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
 
-                // Match patterns like "#4 in Home & Kitchen" or "#٤ في Home & Kitchen"
-                let match = line.match(/#([\d,]+)\s+(?:in|في)\s+(.+?)(?:\(|\s*\(|$)/); // Adjusted regex to handle trailing parentheses or end of line
+                // Match patterns like "#4 in Home & Kitchen" or "رقم ٤ في Home & Kitchen"
+                let match = line.match(/(?:#|رقم)\s*([\d,]+)\s+(?:in|في)\s+(.+?)(?:\(|\s*\(|$)/i);
 
                 if (match) {
                     const rank = match[1].replace(/,/g, '');
@@ -213,6 +216,7 @@ class DataScraper {
         if (prodDetails) {
             const rankings = extractAllRankings(prodDetails.textContent);
             if (rankings.length > 0) {
+                // Return main category (first one) but include all rankings
                 return {
                     rank: rankings[0].rank.toString(),
                     category: rankings[0].category,
@@ -241,16 +245,10 @@ class DataScraper {
         }
 
         // Fallback: try old method for single BSR
-        const detailText = this.root.textContent || document.body.textContent; // Fallback to body if root text empty? No, root should have text.
+        const detailText = this.root.textContent || document.body.textContent;
         const arabicText = arabicToLatin(detailText);
 
-        // Try English pattern
-        let match = arabicText.match(/#([\d,]+)\s+in\s+([^(]+)/);
-        // Try Arabic pattern
-        if (!match) {
-            match = arabicText.match(/#([\d,]+)\s+في\s+([^(]+)/);
-        }
-
+        let match = arabicText.match(/(?:#|رقم)\s*([\d,]+)\s+(?:in|في)\s+([^(]+)/i);
         if (match) {
             return {
                 rank: match[1].replace(/,/g, ''),

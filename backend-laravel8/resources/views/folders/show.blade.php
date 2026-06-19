@@ -17,7 +17,7 @@
         *{margin:0;padding:0;box-sizing:border-box;}
         body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
 
-        .sidebar{position:fixed;left:0;top:0;bottom:0;width:260px;background:var(--surface);border-right:1px solid var(--border);padding:1.5rem;display:flex;flex-direction:column;}
+        .sidebar{position:fixed;left:0;top:0;bottom:0;width:260px;background:var(--surface);border-right:1px solid var(--border);padding:1.5rem;display:flex;flex-direction:column;z-index:100;}
         .sidebar-logo{display:flex;align-items:center;gap:.75rem;font-size:1.25rem;font-weight:700;color:var(--text);text-decoration:none;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border);}
         .logo-icon{width:40px;height:40px;background:var(--gradient);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;}
         .nav-section{margin-bottom:1.5rem;}
@@ -128,6 +128,24 @@
         .form-actions{display:flex;gap:.75rem;justify-content:flex-end;}
 
         @media(max-width:768px){.sidebar{display:none;}.main{margin-left:0;}}
+
+        /* ── My Folders marketplace dropdown ─────────────────────────── */
+        .nav-item-group{position:relative;}
+        .nav-item-group:hover .folders-dropdown,.folders-dropdown:hover{display:block;}
+        .folders-chevron{margin-left:auto;font-size:16px;opacity:.5;transition:transform .2s;}
+        .nav-item-group:hover .folders-chevron{transform:rotate(90deg);opacity:1;}
+        .folders-dropdown{display:none;position:absolute;left:calc(100% + 4px);top:0;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:230px;z-index:9999;overflow:hidden;animation:fadeInScale .15s ease;}
+        @keyframes fadeInScale{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+        .folders-dropdown-header{padding:10px 14px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;border-bottom:1px solid rgba(0,0,0,.07);}
+        .folders-mp-item{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background .15s;text-decoration:none;color:#0f172a;font-size:14px;font-weight:500;}
+        .folders-mp-item:hover{background:rgba(240,136,4,.07);}
+        .folders-mp-item .mp-flag{font-size:20px;}
+        .folders-mp-item .mp-name{flex:1;}
+        .folders-mp-item .mp-currency{font-size:11px;color:#64748b;background:rgba(0,0,0,.06);border-radius:5px;padding:2px 6px;}
+        .folders-mp-item .mp-pin{font-size:14px;opacity:.3;transition:opacity .2s;cursor:pointer;padding:2px 4px;}
+        .folders-mp-item .mp-pin:hover,.folders-mp-item.pinned .mp-pin{opacity:1;}
+        .folders-mp-item.pinned{background:rgba(240,136,4,.05);}
+        .folders-mp-item.pinned .mp-name::after{content:' (pinned)';font-size:10px;color:#f08804;font-weight:600;}
     </style>
 </head>
 <body>
@@ -145,10 +163,17 @@
                 <span class="nav-item-icon">🏠</span>
                 Dashboard
             </a>
-            <a href="/dashboard/folders" class="nav-item active">
-                <span class="nav-item-icon">📁</span>
-                My Folders
-            </a>
+            <div class="nav-item-group">
+                <a href="#" class="nav-item active" onclick="openFoldersPinned(event)">
+                    <span class="nav-item-icon">📁</span>
+                    My Folders
+                    <span class="folders-chevron">›</span>
+                </a>
+                <div class="folders-dropdown">
+                    <div class="folders-dropdown-header">Open Folders For</div>
+                    <div id="folders-dropdown-items"></div>
+                </div>
+            </div>
         </div>
         @if(Auth::user()->isAdmin())
         <div class="nav-section">
@@ -212,7 +237,9 @@
             <div class="folder-hero-info">
                 <span class="folder-big-icon">📁</span>
                 <div>
-                    <div class="folder-title">{{ $folder->name }}</div>
+                    <div class="folder-title">{{ $folder->name }}
+                        <span id="mp-badge" style="font-size:12px;font-weight:600;margin-left:8px;padding:2px 9px;border-radius:16px;background:rgba(240,136,4,0.12);color:#f08804;"></span>
+                    </div>
                     @if($folder->description)
                         <div class="folder-desc">{{ $folder->description }}</div>
                     @endif
@@ -475,3 +502,42 @@ function confirmDeleteList(id, name) {
 </script>
 </body>
 </html>
+<script>
+(function() {
+    const STORAGE_KEY = 'sela_pinned_marketplace';
+    const MARKETPLACES = [
+        { code: 'amazon.eg',  flag: '🇪🇬', name: 'Egypt',        currency: 'EGP' },
+        { code: 'amazon.sa',  flag: '🇸🇦', name: 'Saudi Arabia', currency: 'SAR' },
+        { code: 'amazon.ae',  flag: '🇦🇪', name: 'UAE',          currency: 'AED' },
+        { code: 'amazon.com', flag: '🇺🇸', name: 'USA',          currency: 'USD' },
+    ];
+    const folderMp = '{{ $folder->marketplace ?? 'amazon.eg' }}';
+    function getPinned() { return localStorage.getItem(STORAGE_KEY) || 'amazon.eg'; }
+    function setPinned(code) { localStorage.setItem(STORAGE_KEY, code); }
+    function foldersUrl(code) { return '/dashboard/folders?marketplace=' + encodeURIComponent(code); }
+    function renderDropdown() {
+        const pinned = getPinned();
+        const container = document.getElementById('folders-dropdown-items');
+        if (!container) return;
+        const sorted = [...MARKETPLACES].sort((a, b) => a.code === pinned ? -1 : b.code === pinned ? 1 : 0);
+        container.innerHTML = sorted.map(mp => `
+            <a class="folders-mp-item ${mp.code === pinned ? 'pinned' : ''}"
+               href="${foldersUrl(mp.code)}" data-code="${mp.code}">
+                <span class="mp-flag">${mp.flag}</span>
+                <span class="mp-name">${mp.name}</span>
+                <span class="mp-currency">${mp.currency}</span>
+                <span class="mp-pin" title="Pin" onclick="event.preventDefault();event.stopPropagation();pinMarketplace('${mp.code}')">
+                    ${mp.code === pinned ? '📌' : '📍'}
+                </span>
+            </a>`).join('');
+    }
+    window.pinMarketplace = function(code) { setPinned(code); renderDropdown(); };
+    window.openFoldersPinned = function(e) { e.preventDefault(); window.location.href = foldersUrl(getPinned()); };
+    document.addEventListener('DOMContentLoaded', function() {
+        renderDropdown();
+        const mp = MARKETPLACES.find(m => m.code === folderMp);
+        const badge = document.getElementById('mp-badge');
+        if (badge && mp) badge.textContent = mp.flag + ' ' + mp.name;
+    });
+})();
+</script>

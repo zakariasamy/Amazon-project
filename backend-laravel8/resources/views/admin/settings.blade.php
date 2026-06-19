@@ -401,12 +401,13 @@
         <!-- Tabs Switcher -->
         <div class="tabs-bar">
             <button type="button" class="tab-btn active" data-tab="features">🛡️ Feature Toggles</button>
+            <button type="button" class="tab-btn" data-tab="countries">🌍 Country Settings</button>
             <button type="button" class="tab-btn" data-tab="market">📊 Market Analysis</button>
             <button type="button" class="tab-btn" data-tab="analyzer">🧠 Competitor Keyword Analyzer</button>
             <button type="button" class="tab-btn" data-tab="reverse">🔑 Reverse ASIN</button>
             <button type="button" class="tab-btn" data-tab="magnet">🧲 Keyword Magnet</button>
             <button type="button" class="tab-btn" data-tab="testmode">🛠️ Test Mode</button>
-
+            <button type="button" class="tab-btn" data-tab="google_ads">⚙️ Google Ads API</button>
         </div>
 
         <form method="POST" action="{{ route('admin.settings.update') }}">
@@ -490,6 +491,78 @@
                     </div>
                     <label class="switch">
                         <input type="checkbox" class="feature-toggle" name="feature_keyword_magnet_enabled" value="1" {{ $settings['feature_keyword_magnet_enabled']['value'] ? 'checked' : '' }}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting">
+                    <div>
+                        <div class="label">Google Keyword Planner Tool</div>
+                        <div class="description">{{ $settings['feature_google_keyword_planner_enabled']['description'] }}</div>
+                        @error('feature_google_keyword_planner_enabled')<div class="error-msg">{{ $message }}</div>@enderror
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" class="feature-toggle" name="feature_google_keyword_planner_enabled" value="1" {{ $settings['feature_google_keyword_planner_enabled']['value'] ? 'checked' : '' }}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- ================= TAB: COUNTRY SETTINGS ================= -->
+            <div class="tab-panel" id="panel-countries">
+                <div class="panel-header">
+                    <h2 class="panel-title">🌍 Country Settings</h2>
+                    <p style="color:var(--muted);font-size:14px;margin:4px 0 0;">Enable or disable each Amazon marketplace. Disabled marketplaces will not appear in the extension or folder options.</p>
+                </div>
+
+                <!-- Amazon Egypt -->
+                <div class="setting">
+                    <div>
+                        <div class="label">🇪🇬 Amazon Egypt <span style="font-size:12px;color:var(--muted);font-weight:500;">(amazon.eg) &nbsp;·&nbsp; Currency: EGP</span></div>
+                        <div class="description">{{ $settings['marketplace_eg_enabled']['description'] }}</div>
+                        @error('marketplace_eg_enabled')<div class="error-msg">{{ $message }}</div>@enderror
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" class="feature-toggle" name="marketplace_eg_enabled" value="1" {{ ($settings['marketplace_eg_enabled']['value'] ?? true) ? 'checked' : '' }}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <!-- Amazon Saudi Arabia -->
+                <div class="setting">
+                    <div>
+                        <div class="label">🇸🇦 Amazon Saudi Arabia <span style="font-size:12px;color:var(--muted);font-weight:500;">(amazon.sa) &nbsp;·&nbsp; Currency: SAR</span></div>
+                        <div class="description">{{ $settings['marketplace_sa_enabled']['description'] }}</div>
+                        @error('marketplace_sa_enabled')<div class="error-msg">{{ $message }}</div>@enderror
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" class="feature-toggle" name="marketplace_sa_enabled" value="1" {{ ($settings['marketplace_sa_enabled']['value'] ?? true) ? 'checked' : '' }}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <!-- Amazon UAE -->
+                <div class="setting">
+                    <div>
+                        <div class="label">🇦🇪 Amazon UAE <span style="font-size:12px;color:var(--muted);font-weight:500;">(amazon.ae) &nbsp;·&nbsp; Currency: AED</span></div>
+                        <div class="description">{{ $settings['marketplace_ae_enabled']['description'] }}</div>
+                        @error('marketplace_ae_enabled')<div class="error-msg">{{ $message }}</div>@enderror
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" class="feature-toggle" name="marketplace_ae_enabled" value="1" {{ ($settings['marketplace_ae_enabled']['value'] ?? true) ? 'checked' : '' }}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <!-- Amazon USA -->
+                <div class="setting">
+                    <div>
+                        <div class="label">🇺🇸 Amazon USA <span style="font-size:12px;color:var(--muted);font-weight:500;">(amazon.com) &nbsp;·&nbsp; Currency: USD</span></div>
+                        <div class="description">{{ $settings['marketplace_com_enabled']['description'] }}</div>
+                        @error('marketplace_com_enabled')<div class="error-msg">{{ $message }}</div>@enderror
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" class="feature-toggle" name="marketplace_com_enabled" value="1" {{ ($settings['marketplace_com_enabled']['value'] ?? true) ? 'checked' : '' }}>
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -686,6 +759,58 @@
                         @error('test_mode_product_url')<div class="error-msg">{{ $message }}</div>@enderror
                     </div>
                     <input type="text" name="test_mode_product_url" value="{{ old('test_mode_product_url', $settings['test_mode_product_url']['value']) }}">
+                </div>
+            </div>
+
+            <!-- ================= TAB 7: GOOGLE ADS API ================= -->
+            <div class="tab-panel" id="panel-google_ads">
+                <div class="panel-header">
+                    <h2 class="panel-title">⚙️ Google Ads API Configuration</h2>
+                </div>
+
+                <div class="setting">
+                    <div>
+                        <div class="label">Google Ads Developer Token</div>
+                        <div class="description">Your Google Ads API developer token.</div>
+                        @error('google_ads_developer_token')<div class="error-msg">{{ $message }}</div>@enderror
+                    </div>
+                    <input type="text" name="google_ads_developer_token" value="{{ old('google_ads_developer_token', $settings['google_ads_developer_token']['value'] ?? '') }}">
+                </div>
+
+                <div class="setting">
+                    <div>
+                        <div class="label">OAuth2 Client ID</div>
+                        <div class="description">Your Google Cloud Platform OAuth2 client ID.</div>
+                        @error('google_ads_client_id')<div class="error-msg">{{ $message }}</div>@enderror
+                    </div>
+                    <input type="text" name="google_ads_client_id" value="{{ old('google_ads_client_id', $settings['google_ads_client_id']['value'] ?? '') }}">
+                </div>
+
+                <div class="setting">
+                    <div>
+                        <div class="label">OAuth2 Client Secret</div>
+                        <div class="description">Your Google Cloud Platform OAuth2 client secret.</div>
+                        @error('google_ads_client_secret')<div class="error-msg">{{ $message }}</div>@enderror
+                    </div>
+                    <input type="text" name="google_ads_client_secret" value="{{ old('google_ads_client_secret', $settings['google_ads_client_secret']['value'] ?? '') }}">
+                </div>
+
+                <div class="setting">
+                    <div>
+                        <div class="label">OAuth2 Refresh Token</div>
+                        <div class="description">Google OAuth2 Refresh Token (used to generate transient access tokens).</div>
+                        @error('google_ads_refresh_token')<div class="error-msg">{{ $message }}</div>@enderror
+                    </div>
+                    <input type="text" name="google_ads_refresh_token" value="{{ old('google_ads_refresh_token', $settings['google_ads_refresh_token']['value'] ?? '') }}">
+                </div>
+
+                <div class="setting">
+                    <div>
+                        <div class="label">Google Ads Customer ID</div>
+                        <div class="description">Your 10-digit Google Ads customer ID (e.g. 1234567890). Do not include hyphens.</div>
+                        @error('google_ads_customer_id')<div class="error-msg">{{ $message }}</div>@enderror
+                    </div>
+                    <input type="text" name="google_ads_customer_id" value="{{ old('google_ads_customer_id', $settings['google_ads_customer_id']['value'] ?? '') }}">
                 </div>
             </div>
 

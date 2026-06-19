@@ -40,7 +40,8 @@ class ProductAnalysisController extends Controller
         $monthlyBadge = $validated['monthly_badge'] ?? null;
         $cogs = $validated['cogs'] ?? ($price > 0 ? $price * 0.30 : 0); // Default 30% of price
         $weightKg = floatval($validated['weight_kg'] ?? 0.5);
-        $currency = $validated['currency'] ?? ($marketplace === 'amazon.eg' ? 'EGP' : 'USD');
+        $currencyMap = ['amazon.com' => 'USD', 'amazon.eg' => 'EGP', 'amazon.sa' => 'SAR', 'amazon.ae' => 'AED'];
+        $currency = $validated['currency'] ?? ($currencyMap[$marketplace] ?? 'USD');
 
         // Get algorithm constants
         $constants = $this->getConstants($marketplace, $category);

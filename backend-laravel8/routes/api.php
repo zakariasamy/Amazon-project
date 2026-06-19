@@ -141,6 +141,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Keywords - Cache (requires auth to prevent spam)
     Route::post('/keywords/cache', [KeywordsController::class, 'cache']);
     
+    // Google Keyword Planner Forecast API
+    Route::post('/google-keyword-planner/forecast', [\App\Http\Controllers\GoogleKeywordTestController::class, 'simulate']);
+
     // Analytics
     Route::get('/analytics/category/{id}', [AnalyticsController::class, 'category']);
     Route::get('/analytics/trends', [AnalyticsController::class, 'trends']);
@@ -155,6 +158,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ─── Dashboard Folders & Lists (for Chrome Extension) ────────────────────
     Route::get('/dashboard/folders',                  [DashboardApiController::class, 'folders']);
+    Route::post('/dashboard/folders',                 [DashboardApiController::class, 'createFolder']);
     Route::get('/dashboard/folders/{id}/lists',       [DashboardApiController::class, 'listsInFolder']);
     Route::post('/dashboard/lists',                   [DashboardApiController::class, 'createList']);
     Route::post('/dashboard/lists/{id}/items',        [DashboardApiController::class, 'saveItems']);

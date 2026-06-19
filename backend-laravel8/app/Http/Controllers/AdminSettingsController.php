@@ -74,6 +74,16 @@ class AdminSettingsController extends Controller
             'feature_reverse_asin_enabled' => ['nullable', 'boolean'],
             'feature_fba_calculator_enabled' => ['nullable', 'boolean'],
             'feature_keyword_magnet_enabled' => ['nullable', 'boolean'],
+            'marketplace_eg_enabled'  => ['nullable', 'boolean'],
+            'marketplace_sa_enabled'  => ['nullable', 'boolean'],
+            'marketplace_ae_enabled'  => ['nullable', 'boolean'],
+            'marketplace_com_enabled' => ['nullable', 'boolean'],
+            'feature_google_keyword_planner_enabled' => ['nullable', 'boolean'],
+            'google_ads_developer_token' => ['nullable', 'string', 'max:255'],
+            'google_ads_client_id' => ['nullable', 'string', 'max:255'],
+            'google_ads_client_secret' => ['nullable', 'string', 'max:255'],
+            'google_ads_refresh_token' => ['nullable', 'string', 'max:255'],
+            'google_ads_customer_id' => ['nullable', 'string', 'max:255'],
         ]);
 
         $magnetData = $request->validate([
@@ -104,6 +114,11 @@ class AdminSettingsController extends Controller
         $data['feature_reverse_asin_enabled'] = $request->boolean('feature_reverse_asin_enabled');
         $data['feature_fba_calculator_enabled'] = $request->boolean('feature_fba_calculator_enabled');
         $data['feature_keyword_magnet_enabled'] = $request->boolean('feature_keyword_magnet_enabled');
+        $data['marketplace_eg_enabled']  = $request->boolean('marketplace_eg_enabled');
+        $data['marketplace_sa_enabled']  = $request->boolean('marketplace_sa_enabled');
+        $data['marketplace_ae_enabled']  = $request->boolean('marketplace_ae_enabled');
+        $data['marketplace_com_enabled'] = $request->boolean('marketplace_com_enabled');
+        $data['feature_google_keyword_planner_enabled'] = $request->boolean('feature_google_keyword_planner_enabled');
 
         $magnetData['use_autocomplete'] = $request->boolean('use_autocomplete');
         $magnetData['use_related'] = $request->boolean('use_related');
@@ -123,13 +138,15 @@ class AdminSettingsController extends Controller
                         : (string) $data[$key],
                     'type' => $default['type'],
                     'description' => $default['description'],
-                    'category' => strpos($key, 'feature_') === 0
-                        ? 'features'
-                        : (strpos($key, 'test_mode') === 0
-                            ? 'test_mode'
-                            : (strpos($key, 'reverse_asin_') === 0
-                                ? 'reverse_asin'
-                                : (strpos($key, 'search_page_') === 0 ? 'search_page' : 'cerebro'))),
+                    'category' => strpos($key, 'google_ads_') === 0
+                        ? 'google_ads'
+                        : (strpos($key, 'feature_') === 0
+                            ? 'features'
+                            : (strpos($key, 'test_mode') === 0
+                                ? 'test_mode'
+                                : (strpos($key, 'reverse_asin_') === 0
+                                    ? 'reverse_asin'
+                                    : (strpos($key, 'search_page_') === 0 ? 'search_page' : 'cerebro')))),
                     'updated_at' => now(),
                     'created_at' => now(),
                 ]
@@ -376,6 +393,56 @@ class AdminSettingsController extends Controller
                 'value' => true,
                 'type' => 'boolean',
                 'description' => 'Enable or disable the Keyword Magnet feature on search pages.',
+            ],
+            'marketplace_eg_enabled' => [
+                'value' => true,
+                'type' => 'boolean',
+                'description' => 'Enable or disable Amazon Egypt (amazon.eg) marketplace support.',
+            ],
+            'marketplace_sa_enabled' => [
+                'value' => true,
+                'type' => 'boolean',
+                'description' => 'Enable or disable Amazon Saudi Arabia (amazon.sa) marketplace support.',
+            ],
+            'marketplace_ae_enabled' => [
+                'value' => true,
+                'type' => 'boolean',
+                'description' => 'Enable or disable Amazon UAE (amazon.ae) marketplace support.',
+            ],
+            'marketplace_com_enabled' => [
+                'value' => true,
+                'type' => 'boolean',
+                'description' => 'Enable or disable Amazon USA (amazon.com) marketplace support.',
+            ],
+            'feature_google_keyword_planner_enabled' => [
+                'value' => true,
+                'type' => 'boolean',
+                'description' => 'Enable or disable the Google Keyword Planner testing tool and extension injection overlays.',
+            ],
+            'google_ads_developer_token' => [
+                'value' => '',
+                'type' => 'string',
+                'description' => 'Google Ads API Developer Token.',
+            ],
+            'google_ads_client_id' => [
+                'value' => '',
+                'type' => 'string',
+                'description' => 'Google Ads OAuth2 Client ID.',
+            ],
+            'google_ads_client_secret' => [
+                'value' => '',
+                'type' => 'string',
+                'description' => 'Google Ads OAuth2 Client Secret.',
+            ],
+            'google_ads_refresh_token' => [
+                'value' => '',
+                'type' => 'string',
+                'description' => 'Google Ads OAuth2 Refresh Token.',
+            ],
+            'google_ads_customer_id' => [
+                'value' => '',
+                'type' => 'string',
+                'description' => 'Google Ads Customer ID (without hyphens).',
             ],
         ];
     }

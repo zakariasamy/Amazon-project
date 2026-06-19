@@ -714,17 +714,24 @@ class CerebroUI {
                 }
             });
 
-            const currency = window.location.hostname.includes('.eg') ? 'EGP' : 'USD';
+            const host = window.location.hostname.replace('www.', '');
+            const mc = new MarketConstants(host);
+            const currency = mc.getCurrency();
             const itemsToSave = selectedProducts.map(p => ({
                 asin:         p.asin,
                 title:        p.title || 'Unknown',
                 price:        typeof p.price === 'number' ? p.price : (parseFloat(String(p.price).replace(/[^0-9.]/g, '')) || 0),
                 currency:     currency,
-                bsr:          p.bsr ? parseInt(String(p.bsr).replace(/[^0-9]/g, '')) : 0,
+                bsr:          p.bsr ? (parseInt(String(p.bsr.rank || p.bsr).replace(/[^0-9]/g, '')) || 0) : 0,
                 rating:       parseFloat(p.rating) || 0,
                 rating_count: typeof p.reviews === 'number' ? p.reviews : (parseInt(String(p.reviews).replace(/[^0-9]/g, '')) || 0),
-                marketplace:  window.location.hostname,
-                url:          `https://${window.location.hostname}/dp/${p.asin}`
+                marketplace:  host,
+                url:          `https://${host}/dp/${p.asin}`,
+                image:        p.image || '',
+                brand:        p.brand || '',
+                category:     p.category || 'default',
+                seller_count: parseInt(p.seller_count) || 1,
+                monthly_sales: parseInt(p.monthly_sales) || 0,
             }));
 
             const sendMessage = typeof safeSendMessage !== 'undefined' ? safeSendMessage : (msg, cb) => chrome.runtime.sendMessage(msg, cb);

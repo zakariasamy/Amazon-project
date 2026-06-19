@@ -14,35 +14,59 @@ class FeesController extends Controller
      */
     private const REFERRAL_FEES = [
         'amazon.com' => [
-            'Electronics' => 0.08,
-            'Cell Phones' => 0.08,
-            'Computers' => 0.08,
-            'Camera' => 0.08,
-            'Video Games' => 0.15,
-            'Books' => 0.15,
-            'Clothing' => 0.17,
-            'Shoes' => 0.15,
-            'Jewelry' => 0.20,
-            'Watches' => 0.15,
-            'Home & Kitchen' => 0.15,
-            'Sports & Outdoors' => 0.15,
-            'Beauty' => 0.15,
+            'Electronics'        => 0.08,
+            'Cell Phones'        => 0.08,
+            'Computers'          => 0.08,
+            'Camera'             => 0.08,
+            'Video Games'        => 0.15,
+            'Books'              => 0.15,
+            'Clothing'           => 0.17,
+            'Shoes'              => 0.15,
+            'Jewelry'            => 0.20,
+            'Watches'            => 0.15,
+            'Home & Kitchen'     => 0.15,
+            'Sports & Outdoors'  => 0.15,
+            'Beauty'             => 0.15,
             'Health & Household' => 0.15,
-            'Grocery' => 0.15,
-            'Pet Supplies' => 0.15,
-            'Toys & Games' => 0.15,
-            'default' => 0.15,
+            'Grocery'            => 0.15,
+            'Pet Supplies'       => 0.15,
+            'Toys & Games'       => 0.15,
+            'default'            => 0.15,
         ],
         'amazon.eg' => [
-            'Electronics' => 0.10,
-            'Cell Phones' => 0.10,
+            'Electronics'    => 0.10,
+            'Cell Phones'    => 0.10,
             'Home & Kitchen' => 0.15,
-            'Beauty' => 0.15,
-            'Fashion' => 0.15,
-            'Books' => 0.15,
+            'Beauty'         => 0.15,
+            'Fashion'        => 0.15,
+            'Books'          => 0.15,
             'Sports & Outdoors' => 0.15,
-            'Grocery' => 0.10,
-            'default' => 0.15,
+            'Grocery'        => 0.10,
+            'default'        => 0.15,
+        ],
+        // Saudi Arabia — placeholder mirrors Egypt rates until official sheets provided
+        'amazon.sa' => [
+            'Electronics'    => 0.10,
+            'Cell Phones'    => 0.10,
+            'Home & Kitchen' => 0.15,
+            'Beauty'         => 0.15,
+            'Fashion'        => 0.15,
+            'Books'          => 0.15,
+            'Sports & Outdoors' => 0.15,
+            'Grocery'        => 0.10,
+            'default'        => 0.15,
+        ],
+        // UAE — placeholder mirrors Egypt rates until official sheets provided
+        'amazon.ae' => [
+            'Electronics'    => 0.10,
+            'Cell Phones'    => 0.10,
+            'Home & Kitchen' => 0.15,
+            'Beauty'         => 0.15,
+            'Fashion'        => 0.15,
+            'Books'          => 0.15,
+            'Sports & Outdoors' => 0.15,
+            'Grocery'        => 0.10,
+            'default'        => 0.15,
         ],
     ];
 
@@ -57,11 +81,55 @@ class FeesController extends Controller
             'large_oversize' => 89.98,   // > 70 lb
         ],
         'amazon.eg' => [
-            'small_standard' => 25.00,   // <= 0.5 kg
-            'large_standard' => 35.00,   // <= 1.5 kg
-            'small_oversize' => 60.00,   // <= 30 kg
-            'large_oversize' => 120.00,  // > 30 kg
+            'small_standard' => 25.00,   // <= 0.5 kg (EGP)
+            'large_standard' => 35.00,   // <= 1.5 kg (EGP)
+            'small_oversize' => 60.00,   // <= 30 kg  (EGP)
+            'large_oversize' => 120.00,  // > 30 kg   (EGP)
         ],
+        // Saudi Arabia — placeholder mirrors Egypt rates (in SAR) until official sheets provided
+        'amazon.sa' => [
+            'small_standard' => 25.00,   // <= 0.5 kg (SAR)
+            'large_standard' => 35.00,   // <= 1.5 kg (SAR)
+            'small_oversize' => 60.00,   // <= 30 kg  (SAR)
+            'large_oversize' => 120.00,  // > 30 kg   (SAR)
+        ],
+        // UAE — placeholder mirrors Egypt rates (in AED) until official sheets provided
+        'amazon.ae' => [
+            'small_standard' => 25.00,   // <= 0.5 kg (AED)
+            'large_standard' => 35.00,   // <= 1.5 kg (AED)
+            'small_oversize' => 60.00,   // <= 30 kg  (AED)
+            'large_oversize' => 120.00,  // > 30 kg   (AED)
+        ],
+    ];
+
+    /**
+     * Currency codes by marketplace
+     */
+    private const CURRENCY_MAP = [
+        'amazon.com' => 'USD',
+        'amazon.eg'  => 'EGP',
+        'amazon.sa'  => 'SAR',
+        'amazon.ae'  => 'AED',
+    ];
+
+    /**
+     * Default VAT/tax rates by marketplace
+     */
+    private const VAT_RATES = [
+        'amazon.com' => 0.0,   // No national VAT in the US
+        'amazon.eg'  => 0.14,  // Egypt 14% VAT
+        'amazon.sa'  => 0.15,  // Saudi Arabia 15% VAT
+        'amazon.ae'  => 0.05,  // UAE 5% VAT
+    ];
+
+    /**
+     * Monthly storage fees per cubic metre
+     */
+    private const STORAGE_FEES = [
+        'amazon.com' => 30.00,  // ~$0.87/cubic foot converted (USD)
+        'amazon.eg'  => 250.00, // EGP
+        'amazon.sa'  => 250.00, // SAR — placeholder mirrors EG rate
+        'amazon.ae'  => 250.00, // AED — placeholder mirrors EG rate
     ];
 
     /**
@@ -125,7 +193,7 @@ class FeesController extends Controller
         $category = $validated['category'] ?? 'default';
         $isFba = $validated['is_fba'] ?? true;
 
-        $currency = $marketplace === 'amazon.eg' ? 'EGP' : 'USD';
+        $currency = self::CURRENCY_MAP[$marketplace] ?? 'USD';
 
         // Calculate Referral Fee
         $referralPercent = $this->getReferralFeePercent($marketplace, $category);
@@ -257,14 +325,6 @@ class FeesController extends Controller
             return $base['large_oversize'];
         }
     }
-
-    /**
-     * Monthly storage fees per cubic meter (approximate)
-     */
-    private const STORAGE_FEES = [
-        'amazon.com' => 30.00, // Roughly $0.87/cubic foot converted to cubic meter (~$30 USD)
-        'amazon.eg' => 250.00, // Estimated EGP per cubic meter
-    ];
 
     /**
      * Calculate estimated monthly storage fee

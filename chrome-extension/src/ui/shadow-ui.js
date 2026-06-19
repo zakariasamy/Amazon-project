@@ -254,14 +254,23 @@ class ShadowUI {
           const asin = analysis.asin || '';
           if (!asin) return;
 
+          const host = window.location.hostname.replace('www.', '');
+          const mc = new MarketConstants(host);
+          const currency = analysis.currency || mc.getCurrency();
           const itemData = {
               asin:         asin,
               title:        analysis.title || '',
-              price:        analysis.price || 0,
-              bsr:          analysis.bsr || 0,
-              rating:       analysis.rating || 0,
-              rating_count: analysis.rating_count || 0,
-              marketplace:  window.location.hostname,
+              price:        parseFloat(analysis.price) || 0,
+              currency:     currency,
+              bsr:          analysis.bsr ? (parseInt(analysis.bsr.rank || analysis.bsr) || 0) : 0,
+              rating:       parseFloat(analysis.rating) || 0,
+              rating_count: parseInt(analysis.rating_count) || 0,
+              marketplace:  host,
+              brand:        analysis.brand || '',
+              category:     analysis.category || 'default',
+              seller_count: parseInt(analysis.sellerCount) || 1,
+              image:        analysis.images && analysis.images.length > 0 ? analysis.images[0] : '',
+              url:          window.location.href,
           };
 
           let token = '';
@@ -533,14 +542,23 @@ class ShadowUI {
         const asin = analysis.asin || '';
         if (!asin) return;
 
+        const host = window.location.hostname.replace('www.', '');
+        const mc = new MarketConstants(host);
+        const currency = analysis.currency || mc.getCurrency();
         const itemData = {
             asin:         asin,
             title:        analysis.title || '',
-            price:        analysis.price || 0,
-            bsr:          analysis.bsr || 0,
-            rating:       analysis.rating || 0,
-            rating_count: analysis.rating_count || 0,
-            marketplace:  window.location.hostname,
+            price:        parseFloat(analysis.price) || 0,
+            currency:     currency,
+            bsr:          analysis.bsr ? (parseInt(analysis.bsr.rank || analysis.bsr) || 0) : 0,
+            rating:       parseFloat(analysis.rating) || 0,
+            rating_count: parseInt(analysis.rating_count) || 0,
+            marketplace:  host,
+            brand:        analysis.brand || '',
+            category:     analysis.category || 'default',
+            seller_count: parseInt(analysis.sellerCount) || 1,
+            image:        analysis.images && analysis.images.length > 0 ? analysis.images[0] : '',
+            url:          window.location.href,
         };
 
         let token = '';

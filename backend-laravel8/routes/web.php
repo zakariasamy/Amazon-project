@@ -63,6 +63,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/subscription/upgrade', [\App\Http\Controllers\SubscriptionWebController::class, 'upgrade'])->name('subscription.upgrade');
     Route::get('/subscription/pay/{plan_id}', [\App\Http\Controllers\SubscriptionWebController::class, 'pay'])->name('subscription.pay');
     Route::post('/subscription/pay', [\App\Http\Controllers\SubscriptionWebController::class, 'submitPay'])->name('subscription.pay.submit');
+
+    // Google Keyword Planner Tool (Prototype & Testing Dashboard)
+    Route::get('/admin/google-keyword-planner', [\App\Http\Controllers\GoogleKeywordTestController::class, 'index'])->name('admin.google_keyword_planner');
+    Route::post('/admin/google-keyword-planner/simulate', [\App\Http\Controllers\GoogleKeywordTestController::class, 'simulate'])->name('admin.google_keyword_planner.simulate');
     
     // Cerebro / Competitor Keyword Analyzer - Analyses
     Route::get('/cerebro', [CerebroWebController::class, 'index'])->name('cerebro.index');

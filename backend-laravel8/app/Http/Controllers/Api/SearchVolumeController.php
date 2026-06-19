@@ -22,7 +22,7 @@ class SearchVolumeController extends Controller
         $m = explode('/', $m)[0] ?? $m;
         $m = preg_replace('#^(www\.|smile\.|m\.)#', '', $m);
 
-        $known = ['amazon.co.uk', 'amazon.com', 'amazon.eg', 'amazon.de'];
+        $known = ['amazon.co.uk', 'amazon.com', 'amazon.eg', 'amazon.de', 'amazon.sa', 'amazon.ae'];
         foreach ($known as $k) {
             if (Str::endsWith($m, $k)) {
                 return $k;
@@ -51,6 +51,34 @@ class SearchVolumeController extends Controller
             'default' => 0.110,
         ],
         'amazon.eg' => [
+            'Electronics' => 0.060,
+            'Cell Phones' => 0.075,
+            'Fashion' => 0.080,
+            'Home & Kitchen' => 0.100,
+            'Beauty' => 0.090,
+            'Health & Household' => 0.120,
+            'Sports & Outdoors' => 0.070,
+            'Toys & Games' => 0.100,
+            'Grocery' => 0.180,
+            'Pet Supplies' => 0.100,
+            'Books' => 0.080,
+            'default' => 0.100,
+        ],
+        'amazon.sa' => [
+            'Electronics' => 0.060,
+            'Cell Phones' => 0.075,
+            'Fashion' => 0.080,
+            'Home & Kitchen' => 0.100,
+            'Beauty' => 0.090,
+            'Health & Household' => 0.120,
+            'Sports & Outdoors' => 0.070,
+            'Toys & Games' => 0.100,
+            'Grocery' => 0.180,
+            'Pet Supplies' => 0.100,
+            'Books' => 0.080,
+            'default' => 0.100,
+        ],
+        'amazon.ae' => [
             'Electronics' => 0.060,
             'Cell Phones' => 0.075,
             'Fashion' => 0.080,
@@ -366,6 +394,41 @@ class SearchVolumeController extends Controller
         // Calculate search volume from current data
         $result = $this->calculateSearchVolume($marketplace, $products);
 
+        // Live Google Keyword Planner blending integration
+        $googleVol = $this->fetchRealGoogleVolume($keyword);
+        if ($googleVol !== null && $googleVol > 0) {
+            $weightedSales = $result['sales_metrics']['weighted_sales'] ?? 0;
+            // Calculate dynamic AIR using 10% standard conversion rate normalization
+            $dynamicAir = ($googleVol > 0) ? ($weightedSales / ($googleVol * 0.10)) : 0.15;
+            $air = min(max($dynamicAir, 0.05), 1.0);
+
+            $adjustedAmazonVolume = (int) round($googleVol * $air);
+
+            // Apply long-tail query dampening
+            $wordCount = str_word_count($keyword);
+            if ($wordCount >= 3) {
+                $dampeningFactor = match($wordCount) {
+                    3 => 0.75,
+                    4 => 0.50,
+                    default => 0.30
+                };
+                $adjustedAmazonVolume = (int) round($adjustedAmazonVolume * $dampeningFactor);
+            }
+
+            // Override baseline estimate with Google-blended results
+            $result['estimated'] = $adjustedAmazonVolume;
+            $spreadPercent = 0.30 + (1 - ($result['confidence_score'] ?? 0.5)) * 0.20;
+            $result['range'] = [
+                'min' => (int) round($adjustedAmazonVolume * (1 - $spreadPercent)),
+                'max' => (int) round($adjustedAmazonVolume * (1 + $spreadPercent))
+            ];
+            $result['google_volume'] = $googleVol;
+            $result['amazon_intent_ratio'] = $air;
+            $result['google_api_integrated'] = true;
+            $result['google_mode'] = 'real';
+            $result['demand_level'] = $adjustedAmazonVolume >= 3000 ? 'high' : ($adjustedAmazonVolume >= 1000 ? 'medium' : 'low');
+        }
+
         // Competitor Keyword Analyzer can explicitly prefer today's Market Analysis value
         // so the same keyword displays the same volume across tools.
         if ($cachedVolume && ($preferCachedVolume || $cachedVolume['estimated'] > $result['estimated'] * 1.5)) {
@@ -554,7 +617,11 @@ class SearchVolumeController extends Controller
 
             // Estimate FBA fees (simplified - 15% referral + base fulfillment)
             $referralFee = $price * 0.15;
-            $fulfillmentFee = $marketplace === 'amazon.eg' ? 25 : 3.50;
+            $fulfillmentFee = match($marketplace) {
+                'amazon.eg' => 25,
+                'amazon.sa', 'amazon.ae' => 30,
+                default => 3.50,
+            };
             $estimatedFees = round($referralFee + $fulfillmentFee, 2);
 
             $enrichedProducts[] = [
@@ -987,11 +1054,34 @@ class SearchVolumeController extends Controller
 
         if (!$constant) {
             // Hardcoded fallback
+            if ($marketplace === 'amazon.eg') {
+                return [
+                    'C' => 1100,
+                    'P' => 0.68,
+                    'floor' => 2,
+                    'ceiling' => 8000,
+                ];
+            } elseif ($marketplace === 'amazon.sa') {
+                return [
+                    'C' => 9000,
+                    'P' => 0.57,
+                    'floor' => 3,
+                    'ceiling' => 24000,
+                ];
+            } elseif ($marketplace === 'amazon.ae') {
+                return [
+                    'C' => 7500,
+                    'P' => 0.57,
+                    'floor' => 3,
+                    'ceiling' => 20000,
+                ];
+            }
+            
             return [
-                'C' => $marketplace === 'amazon.eg' ? 1100 : 50000,
+                'C' => 50000,
                 'P' => 0.68,
-                'floor' => $marketplace === 'amazon.eg' ? 2 : 5,
-                'ceiling' => $marketplace === 'amazon.eg' ? 8000 : 120000,
+                'floor' => 5,
+                'ceiling' => 120000,
             ];
         }
 
@@ -1118,5 +1208,126 @@ class SearchVolumeController extends Controller
             'source' => 'cache',
             'difficulty_score' => isset($cache->difficulty_score) ? (int) $cache->difficulty_score : null
         ];
+    }
+
+    /**
+     * Fetch real Google Search Volume for a keyword using Google Ads API
+     */
+    private function fetchRealGoogleVolume(string $keyword): ?int
+    {
+        try {
+            // Check if feature is enabled in admin settings
+            $enabled = true;
+            try {
+                $enabledVal = DB::table('app_settings')
+                    ->where('key', 'feature_google_keyword_planner_enabled')
+                    ->value('value');
+                if ($enabledVal !== null) {
+                    $enabled = filter_var($enabledVal, FILTER_VALIDATE_BOOLEAN);
+                }
+            } catch (\Exception $dbEx) {
+                Log::warning('DB connection failed in fetchRealGoogleVolume setting query.');
+            }
+                
+            if (!$enabled) {
+                return null;
+            }
+
+            // Retrieve credentials
+            $devToken = '';
+            $clientId = '';
+            $clientSecret = '';
+            $refreshToken = '';
+            $customerId = '';
+
+            try {
+                $settings = DB::table('app_settings')
+                    ->whereIn('key', [
+                        'google_ads_developer_token',
+                        'google_ads_client_id',
+                        'google_ads_client_secret',
+                        'google_ads_refresh_token',
+                        'google_ads_customer_id'
+                    ])
+                    ->pluck('value', 'key');
+
+                $devToken = $settings->get('google_ads_developer_token') ?? '';
+                $clientId = $settings->get('google_ads_client_id') ?? '';
+                $clientSecret = $settings->get('google_ads_client_secret') ?? '';
+                $refreshToken = $settings->get('google_ads_refresh_token') ?? '';
+                $customerId = str_replace('-', '', $settings->get('google_ads_customer_id') ?? '');
+            } catch (\Exception $dbEx) {
+                Log::warning('DB connection failed in fetchRealGoogleVolume credentials query.');
+            }
+
+            if (!$devToken || !$clientId || !$clientSecret || !$refreshToken || !$customerId) {
+                return null;
+            }
+
+            // 1. Get Access Token via OAuth Refresh Token grant
+            $authResponse = \Illuminate\Support\Facades\Http::asForm()->post('https://oauth2.googleapis.com/token', [
+                'client_id' => trim($clientId),
+                'client_secret' => trim($clientSecret),
+                'refresh_token' => trim($refreshToken),
+                'grant_type' => 'refresh_token',
+            ]);
+
+            if (!$authResponse->successful()) {
+                $errorDesc = $authResponse->json('error_description') ?? $authResponse->json('error') ?? $authResponse->body();
+                Log::warning('Google Ads OAuth token request failed in fetchRealGoogleVolume: ' . $errorDesc);
+                return null;
+            }
+
+            $accessToken = $authResponse->json('access_token');
+            if (!$accessToken) {
+                return null;
+            }
+
+            // 2. Invoke Google Ads REST API
+            $apiVersion = 'v15';
+            $endpoint = "https://googleads.googleapis.com/{$apiVersion}/customers/{$customerId}:generateKeywordIdeas";
+
+            $payload = [
+                'keywordSeed' => [
+                    'keywords' => [$keyword]
+                ],
+                'language' => 'languageConstants/1000', // English
+                'geoModifiers' => ['geoTargetConstants/2840'], // US
+                'keywordPlanNetwork' => 'GOOGLE_SEARCH',
+            ];
+
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => "Bearer {$accessToken}",
+                'developer-token' => $devToken,
+                'Content-Type' => 'application/json',
+            ])->post($endpoint, $payload);
+
+            if (!$response->successful()) {
+                Log::warning('Google Ads generateKeywordIdeas REST call failed: ' . $response->status());
+                return null;
+            }
+
+            $results = $response->json('results');
+            if (empty($results)) {
+                return null;
+            }
+
+            // Search for exact match or first result's monthly volume
+            foreach ($results as $item) {
+                $text = $item['text'] ?? '';
+                if (strtolower(trim($text)) === strtolower(trim($keyword))) {
+                    $metrics = $item['keywordIdeaMetrics'] ?? [];
+                    return (int) ($metrics['avgMonthlySearches'] ?? 1000);
+                }
+            }
+
+            // Fallback to first keyword idea's average volume if not exact match
+            $firstMetrics = $results[0]['keywordIdeaMetrics'] ?? [];
+            return (int) ($firstMetrics['avgMonthlySearches'] ?? 1000);
+
+        } catch (\Exception $e) {
+            Log::warning('Error in fetchRealGoogleVolume: ' . $e->getMessage());
+            return null;
+        }
     }
 }

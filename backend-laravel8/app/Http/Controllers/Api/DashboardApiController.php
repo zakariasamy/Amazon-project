@@ -22,9 +22,12 @@ class DashboardApiController extends Controller
      */
     public function folders(Request $request)
     {
+        $marketplace = $request->query('marketplace', 'amazon.eg');
+
         $folders = DashboardFolder::where('user_id', Auth::id())
+            ->where('marketplace', $marketplace)
             ->orderByRaw('COALESCE(parent_id, 0), name')
-            ->get(['id', 'parent_id', 'name', 'color']);
+            ->get(['id', 'parent_id', 'name', 'color', 'marketplace']);
 
         return response()->json(['success' => true, 'folders' => $folders]);
     }
@@ -204,5 +207,43 @@ class DashboardApiController extends Controller
         $list->syncItemCount();
 
         return response()->json(['success' => true, 'message' => 'Item removed successfully.']);
+    }
+
+    /**
+     * POST /api/dashboard/folders
+     * Create a new folder (from extension).
+     */
+    public function createFolder(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name'        => 'required|string|max:100',
+            'color'       => 'nullable|string|max:20',
+            'description' => 'nullable|string|max:500',
+            'parent_id'   => 'nullable|integer|exists:dashboard_folders,id',
+            'marketplace' => 'nullable|string|max:30',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        // Verify parent folder ownership
+        if ($request->parent_id) {
+            $parent = DashboardFolder::where('user_id', Auth::id())->find($request->parent_id);
+            if (!$parent) {
+                return response()->json(['success' => false, 'message' => 'Parent folder not found.'], 404);
+            }
+        }
+
+        $folder = DashboardFolder::create([
+            'user_id'     => Auth::id(),
+            'parent_id'   => $request->parent_id,
+            'name'        => $request->name,
+            'color'       => $request->color ?? '#6366f1',
+            'description' => $request->description,
+            'marketplace' => $request->marketplace ?? 'amazon.eg',
+        ]);
+
+        return response()->json(['success' => true, 'folder' => $folder], 201);
     }
 }

@@ -49,6 +49,19 @@ class SaveToList {
             'reverse_asin':                '🔄',
             'market_analysis':             '📊',
         };
+
+        // Detect current marketplace from hostname
+        this.marketplace = this._getMarketplace();
+    }
+
+    /**
+     * Returns the normalised marketplace code for the current tab's hostname.
+     * Falls back to 'amazon.eg'.
+     */
+    _getMarketplace() {
+        const host = window.location.hostname.replace('www.', '');
+        const known = ['amazon.com', 'amazon.eg', 'amazon.sa', 'amazon.ae'];
+        return known.includes(host) ? host : 'amazon.eg';
     }
 
     // ── Public API ──────────────────────────────────────────────────────────
@@ -103,7 +116,7 @@ class SaveToList {
             display: flex;
             align-items: center;
             gap: 14px;
-            z-index: 999999999;
+            z-index: 9999;
             box-shadow: 0 8px 32px rgba(0,0,0,0.5);
             font-family: 'Inter', -apple-system, system-ui, sans-serif;
             max-width: 500px;
@@ -173,7 +186,7 @@ class SaveToList {
             position: fixed; inset: 0;
             background: rgba(0,0,0,0.6);
             backdrop-filter: blur(4px);
-            z-index: 99999999;
+            z-index: 9999;
             display: flex; align-items: center; justify-content: center;
             font-family: 'Inter', -apple-system, system-ui, sans-serif;
         `;
@@ -256,7 +269,8 @@ class SaveToList {
 
     async _loadFolders() {
         try {
-            const res = await fetch(`${this.baseUrl}/api/dashboard/folders`, {
+            const mpParam = encodeURIComponent(this.marketplace);
+            const res = await fetch(`${this.baseUrl}/api/dashboard/folders?marketplace=${mpParam}`, {
                 headers: this._headers(),
             });
             if (res.status === 401) {
@@ -302,14 +316,35 @@ class SaveToList {
         const body = this.panel.querySelector('#stl-body');
         if (this.folders.length === 0) {
             body.innerHTML = `
-                <div style="text-align:center;padding:30px;color:#94a3b8;">
+                <div style="text-align:center;padding:10px 0;color:#94a3b8;">
                     <div style="font-size:32px;margin-bottom:10px;">📂</div>
-                    <p style="margin-bottom:14px;font-size:13px;">No folders yet.<br>Create one in the dashboard first.</p>
-                    <a href="${this.baseUrl}/folders" target="_blank"
-                       style="color:#6366f1;font-size:13px;font-weight:600;text-decoration:none;">
-                       Open Dashboard →
-                    </a>
+                    <p style="margin-bottom:14px;font-size:13px;">No folders yet. Create a new folder to get started:</p>
+                    <div id="stl-new-folder-form-empty" style="background:#1e293b;border-radius:12px;padding:14px;text-align:left;max-width:320px;margin:0 auto;">
+                        <div style="color:#94a3b8;font-size:12px;margin-bottom:8px;font-weight:600;">Folder Name</div>
+                        <input id="stl-new-folder-name-empty" type="text" placeholder="Folder name..." maxlength="100" style="
+                            width:100%;padding:8px 12px;background:#0f172a;border:1px solid #334155;
+                            border-radius:8px;color:#fff;font-size:13px;outline:none;margin-bottom:12px;
+                        ">
+                        <button id="stl-confirm-folder-empty" style="
+                            background:#6366f1;border:none;color:#fff;padding:8px 16px;
+                            border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;width:100%;
+                        ">Create Folder</button>
+                    </div>
                 </div>`;
+                
+            body.querySelector('#stl-confirm-folder-empty').addEventListener('click', () => {
+                const nameInput = body.querySelector('#stl-new-folder-name-empty');
+                const name = nameInput.value.trim();
+                if (!name) { nameInput.style.borderColor = '#ef4444'; return; }
+                this._createNewFolder(name);
+            });
+            body.querySelector('#stl-new-folder-name-empty').addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    const name = e.target.value.trim();
+                    if (!name) { e.target.style.borderColor = '#ef4444'; return; }
+                    this._createNewFolder(name);
+                }
+            });
             return;
         }
 
@@ -317,11 +352,39 @@ class SaveToList {
         const roots = this.folders.filter(f => !f.parent_id);
         const children = (parentId) => this.folders.filter(f => f.parent_id === parentId);
 
-        let html = `<div style="margin-bottom:14px;color:#94a3b8;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Select Folder</div>`;
+        let html = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <div style="color:#94a3b8;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Select Folder</div>
+                <button id="stl-new-folder-btn" style="
+                    background:transparent;border:none;color:#6366f1;cursor:pointer;
+                    font-size:12px;font-weight:600;padding:2px 6px;
+                ">+ New Folder</button>
+            </div>
+            
+            <div id="stl-new-folder-form" style="display:none;margin-bottom:14px;background:#1e293b;border-radius:12px;padding:14px;">
+                <div style="color:#94a3b8;font-size:12px;margin-bottom:8px;font-weight:600;">New Folder Name</div>
+                <input id="stl-new-folder-name" type="text" placeholder="Folder name..." maxlength="100" style="
+                    width:100%;padding:8px 12px;background:#0f172a;border:1px solid #334155;
+                    border-radius:8px;color:#fff;font-size:13px;outline:none;margin-bottom:12px;
+                ">
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button id="stl-cancel-folder" style="background:transparent;border:1px solid #374151;color:#9ca3af;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;">Cancel</button>
+                    <button id="stl-confirm-folder" style="background:#6366f1;border:none;color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">Create Folder</button>
+                </div>
+            </div>
+        `;
 
+        body.innerHTML = html;
+
+        // Render folder rows
+        const listContainer = document.createElement('div');
+        listContainer.id = 'stl-folders-list';
+        body.appendChild(listContainer);
+
+        let folderHtml = '';
         const renderFolderRow = (folder, depth = 0) => {
             const indent = depth * 18;
-            html += `
+            folderHtml += `
                 <div class="stl-folder-row" data-folder-id="${folder.id}" style="
                     display:flex;align-items:center;gap:10px;
                     padding:10px 12px;padding-left:${12 + indent}px;
@@ -336,14 +399,13 @@ class SaveToList {
                 </div>`;
             children(folder.id).forEach(c => renderFolderRow(c, depth + 1));
         };
-
         roots.forEach(f => renderFolderRow(f, 0));
+        listContainer.innerHTML = folderHtml;
 
-        body.innerHTML = html;
-
-        body.querySelectorAll('.stl-folder-row').forEach(row => {
+        // Folder row selection event listeners
+        listContainer.querySelectorAll('.stl-folder-row').forEach(row => {
             row.addEventListener('click', () => {
-                body.querySelectorAll('.stl-folder-row').forEach(r => {
+                listContainer.querySelectorAll('.stl-folder-row').forEach(r => {
                     r.classList.remove('stl-selected');
                     r.style.borderColor = 'transparent';
                     r.style.background = '#1e293b';
@@ -356,6 +418,27 @@ class SaveToList {
                 this._disableSave();
                 this._loadListsForFolder(this.selectedFolderId);
             });
+        });
+
+        // New folder toggle event listeners
+        body.querySelector('#stl-new-folder-btn').addEventListener('click', () => {
+            body.querySelector('#stl-new-folder-form').style.display = 'block';
+        });
+        body.querySelector('#stl-cancel-folder').addEventListener('click', () => {
+            body.querySelector('#stl-new-folder-form').style.display = 'none';
+        });
+        body.querySelector('#stl-confirm-folder').addEventListener('click', () => {
+            const nameInput = body.querySelector('#stl-new-folder-name');
+            const name = nameInput.value.trim();
+            if (!name) { nameInput.style.borderColor = '#ef4444'; return; }
+            this._createNewFolder(name);
+        });
+        body.querySelector('#stl-new-folder-name').addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                const name = e.target.value.trim();
+                if (!name) { e.target.style.borderColor = '#ef4444'; return; }
+                this._createNewFolder(name);
+            }
         });
     }
 
@@ -502,7 +585,7 @@ class SaveToList {
             const res = await fetch(`${this.baseUrl}/api/dashboard/lists`, {
                 method: 'POST',
                 headers: { ...this._headers(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ folder_id: folderId, name, type: this.listType }),
+                body: JSON.stringify({ folder_id: folderId, name, type: this.listType, marketplace: this.marketplace }),
             });
             if (res.status === 401) {
                 this._handleUnauthorized();
@@ -525,6 +608,43 @@ class SaveToList {
         } catch {
             confirmBtn.textContent = 'Create & Select';
             confirmBtn.disabled = false;
+            this._showToast('Network error.', '#ef4444');
+        }
+    }
+
+    async _createNewFolder(name) {
+        try {
+            const res = await fetch(`${this.baseUrl}/api/dashboard/folders`, {
+                method: 'POST',
+                headers: { ...this._headers(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name,
+                    marketplace: this.marketplace,
+                    color: '#6366f1'
+                })
+            });
+            if (res.status === 401) {
+                this._handleUnauthorized();
+                return;
+            }
+            const data = await res.json();
+            if (data.success && data.folder) {
+                this._showToast('Folder created!');
+                await this._loadFolders();
+                this._renderFolderPicker();
+                
+                // Auto-select the newly created folder
+                this.selectedFolderId = data.folder.id;
+                this.selectedListId = null;
+                const newRow = this.panel.querySelector(`.stl-folder-row[data-folder-id="${data.folder.id}"]`);
+                if (newRow) {
+                    newRow.click();
+                }
+            } else {
+                this._showToast('Failed to create folder.', '#ef4444');
+            }
+        } catch (e) {
+            console.error('Error in _createNewFolder:', e);
             this._showToast('Network error.', '#ef4444');
         }
     }
@@ -639,7 +759,7 @@ class SaveToList {
             padding: 10px 18px; border-radius: 10px;
             font-size: 13px; font-weight: 600;
             font-family: 'Inter', system-ui, sans-serif;
-            z-index: 999999999; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             animation: stl-fadein 0.2s ease;
         `;
         toast.textContent = msg;

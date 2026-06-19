@@ -44,6 +44,40 @@ class MarketConstants {
                 '20001-50000': 28,
                 '50001-100000': 20,
                 '100001+': 8
+            },
+            // Saudi Arabia — larger market, ~3x Egypt multipliers
+            'amazon.sa': {
+                '1-5': 6000,
+                '6-20': 3600,
+                '21-50': 2400,
+                '51-100': 1800,
+                '101-200': 1200,
+                '201-500': 840,
+                '501-1000': 600,
+                '1001-2000': 420,
+                '2001-5000': 300,
+                '5001-10000': 180,
+                '10001-20000': 120,
+                '20001-50000': 84,
+                '50001-100000': 60,
+                '100001+': 24
+            },
+            // UAE — high-income market, ~2.5x Egypt multipliers
+            'amazon.ae': {
+                '1-5': 5000,
+                '6-20': 3000,
+                '21-50': 2000,
+                '51-100': 1500,
+                '101-200': 1000,
+                '201-500': 700,
+                '501-1000': 500,
+                '1001-2000': 350,
+                '2001-5000': 250,
+                '5001-10000': 150,
+                '10001-20000': 100,
+                '20001-50000': 70,
+                '50001-100000': 50,
+                '100001+': 20
             }
         };
     }
@@ -98,6 +132,42 @@ class MarketConstants {
                     baseFee: 100, // EGP
                     perPoundAbove1lb: 10 // EGP
                 }
+            },
+            // Saudi Arabia — placeholder mirrors Egypt rates (in SAR) until official sheets available
+            'amazon.sa': {
+                'small_standard': {
+                    maxWeight: 16,
+                    baseFee: 30, // SAR
+                    perPoundFee: 0
+                },
+                'large_standard': {
+                    maxWeight: 20,
+                    baseFee: 40, // SAR
+                    perPoundAbove1lb: 5
+                },
+                'large_bulky': {
+                    maxWeight: 50,
+                    baseFee: 100, // SAR
+                    perPoundAbove1lb: 10
+                }
+            },
+            // UAE — placeholder mirrors Egypt rates (in AED) until official sheets available
+            'amazon.ae': {
+                'small_standard': {
+                    maxWeight: 16,
+                    baseFee: 30, // AED
+                    perPoundFee: 0
+                },
+                'large_standard': {
+                    maxWeight: 20,
+                    baseFee: 40, // AED
+                    perPoundAbove1lb: 5
+                },
+                'large_bulky': {
+                    maxWeight: 50,
+                    baseFee: 100, // AED
+                    perPoundAbove1lb: 10
+                }
             }
         };
     }
@@ -137,6 +207,20 @@ class MarketConstants {
             },
             'amazon.eg': {
                 'jan-sep_standard': 27, // EGP
+                'oct-dec_standard': 75,
+                'jan-sep_oversize': 17,
+                'oct-dec_oversize': 43
+            },
+            // Saudi Arabia — placeholder mirrors EG rates in SAR
+            'amazon.sa': {
+                'jan-sep_standard': 27, // SAR
+                'oct-dec_standard': 75,
+                'jan-sep_oversize': 17,
+                'oct-dec_oversize': 43
+            },
+            // UAE — placeholder mirrors EG rates in AED
+            'amazon.ae': {
+                'jan-sep_standard': 27, // AED
                 'oct-dec_standard': 75,
                 'jan-sep_oversize': 17,
                 'oct-dec_oversize': 43
@@ -300,6 +384,28 @@ class MarketConstants {
     getCurrentSeasonMultiplier() {
         const month = new Date().getMonth() + 1; // 1-12
         return this.getSeasonalityMultipliers()[month];
+    }
+
+    /**
+     * Get the ISO currency code for this marketplace
+     */
+    getCurrency() {
+        const map = {
+            'amazon.com': 'USD',
+            'amazon.eg':  'EGP',
+            'amazon.sa':  'SAR',
+            'amazon.ae':  'AED',
+        };
+        return map[this.marketplace] || 'USD';
+    }
+
+    /**
+     * Get the normalised marketplace code from the current hostname
+     */
+    static fromHostname(hostname) {
+        hostname = hostname.replace('www.', '');
+        // Normalise e.g. 'amazon.eg' -> 'amazon.eg'
+        return new MarketConstants(hostname);
     }
 }
 

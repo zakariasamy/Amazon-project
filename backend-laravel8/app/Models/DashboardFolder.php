@@ -14,6 +14,7 @@ class DashboardFolder extends Model
         'name',
         'color',
         'description',
+        'marketplace',
     ];
 
     // ─── Relationships ────────────────────────────────────────────────────────

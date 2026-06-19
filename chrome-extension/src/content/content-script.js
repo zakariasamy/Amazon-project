@@ -64,6 +64,48 @@ function t(key) {
     return translations[key] || key;
 }
 
+// Detect the current Amazon marketplace
+function getMarketplace() {
+    const host = window.location.hostname.replace('www.', '');
+    const known = ['amazon.com', 'amazon.eg', 'amazon.sa', 'amazon.ae'];
+    return known.includes(host) ? host : 'amazon.eg';
+}
+
+// Map marketplace to settings suffix
+function getMarketplaceSuffix(marketplace) {
+    if (marketplace === 'amazon.eg') return 'eg';
+    if (marketplace === 'amazon.sa') return 'sa';
+    if (marketplace === 'amazon.ae') return 'ae';
+    return 'com';
+}
+
+// Get authorization headers for API requests
+async function getAuthHeaders() {
+    try {
+        await apiClient.init();
+    } catch (e) {
+        console.warn('apiClient.init failed:', e);
+    }
+    const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    };
+    if (apiClient.token) {
+        headers['Authorization'] = `Bearer ${apiClient.token}`;
+    } else {
+        // Fallback: try to get token directly from storage just in case
+        try {
+            const data = await chrome.storage.local.get(['authToken']);
+            if (data.authToken) {
+                headers['Authorization'] = `Bearer ${data.authToken}`;
+            }
+        } catch (e) {
+            console.warn('Failed to read token from local storage fallback:', e);
+        }
+    }
+    return headers;
+}
+
 // Detect if we're on an Amazon product page
 function isProductPage() {
     const url = window.location.href;
@@ -108,6 +150,19 @@ async function initializeAnalyzer() {
         }
     } catch (e) {
         console.warn('Failed to fetch settings for analyzer:', e);
+    }
+    
+    // Check if current marketplace is enabled
+    const marketplace = getMarketplace();
+    const suffix = getMarketplaceSuffix(marketplace);
+    const enabledKey = `marketplace_${suffix}_enabled`;
+    const isMarketplaceEnabled = settings[enabledKey] !== undefined
+        ? (settings[enabledKey] === true || settings[enabledKey] === 'true' || settings[enabledKey] === 1 || settings[enabledKey] === '1')
+        : true;
+    
+    if (!isMarketplaceEnabled) {
+        console.log(`Marketplace ${marketplace} is disabled in settings. Aborting injection.`);
+        return;
     }
     
     injectAnalyzerButton(settings);
@@ -227,7 +282,11 @@ function injectAnalyzerButton(settings = {}) {
         ? (settings.feature_fba_calculator_enabled === true || settings.feature_fba_calculator_enabled === 'true' || settings.feature_fba_calculator_enabled === 1 || settings.feature_fba_calculator_enabled === '1')
         : true;
 
-    if (!isAnalyzeProductEnabled && !isReverseAsinEnabled && !isFbaCalculatorEnabled) {
+    const isGoogleKeywordPlannerEnabled = settings.feature_google_keyword_planner_enabled !== undefined
+        ? (settings.feature_google_keyword_planner_enabled === true || settings.feature_google_keyword_planner_enabled === 'true' || settings.feature_google_keyword_planner_enabled === 1 || settings.feature_google_keyword_planner_enabled === '1')
+        : true;
+
+    if (!isAnalyzeProductEnabled && !isReverseAsinEnabled && !isFbaCalculatorEnabled && !isGoogleKeywordPlannerEnabled) {
         console.log('All product page analysis features are disabled by admin');
         return;
     }
@@ -363,6 +422,27 @@ function injectAnalyzerButton(settings = {}) {
                         <span>💰</span> ${t('FBA Calculator')}
                     </button>
                     ` : ''}
+                    ${isGoogleKeywordPlannerEnabled ? `
+                    <button id="sv-btn-google-planner" style="
+                        background: linear-gradient(135deg, #0f172a, #1e293b); 
+                        color: white; 
+                        border: 1px solid #334155; 
+                        padding: 8px 18px; 
+                        border-radius: 12px; 
+                        font-size: 13px; 
+                        font-weight: 700; 
+                        cursor: pointer; 
+                        display: flex; 
+                        align-items: center; 
+                        gap: 8px; 
+                        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.35);
+                        transition: all 0.2s ease-in-out;
+                        white-space: nowrap;
+                        flex-shrink: 0;
+                        min-width: max-content;">
+                        <span>📊</span> ${isArabic ? 'توقع المبيعات' : 'Forecast Sales'}
+                    </button>
+                    ` : ''}
                     <button id="sv-btn-save-list" style="
                         background: linear-gradient(135deg, #6366f1, #4f46e5); 
                         color: white; 
@@ -431,6 +511,13 @@ function injectAnalyzerButton(settings = {}) {
         setupButtonEffects('sv-btn-calculator');
         document.getElementById('sv-btn-calculator').addEventListener('click', () => {
             checkAuthAndExecute(() => openFBACalculator());
+        });
+    }
+
+    if (isGoogleKeywordPlannerEnabled) {
+        setupButtonEffects('sv-btn-google-planner');
+        document.getElementById('sv-btn-google-planner').addEventListener('click', () => {
+            triggerGoogleKeywordPlannerForProduct();
         });
     }
 
@@ -541,7 +628,8 @@ async function analyzeCurrentProduct(mode = 'full') {
             return;
         }
 
-        const marketplace = window.location.hostname.includes('.eg') ? 'amazon.eg' : 'amazon.com';
+        const marketplace = getMarketplace();
+        const mc = new MarketConstants(marketplace);
 
         // *** BACKEND API CALL FOR CALCULATIONS ***
         console.log('Sending data to backend for analysis...');
@@ -551,7 +639,7 @@ async function analyzeCurrentProduct(mode = 'full') {
             marketplace: marketplace,
             title: productData.title || '',
             price: parseFloat(productData.price) || 0,
-            currency: productData.currency || (marketplace === 'amazon.eg' ? 'EGP' : 'USD'),
+            currency: productData.currency || mc.getCurrency(),
             bsr: productData.bsr ? parseInt(productData.bsr.rank || productData.bsr) : null,
             category: productData.category || (productData.bsr ? productData.bsr.category : 'default'),
             reviews_count: parseInt(productData.reviewCount) || 0, // Fixed: reviewCount not reviewsCount
@@ -576,12 +664,10 @@ async function analyzeCurrentProduct(mode = 'full') {
             };
         } else {
             try {
+                const apiHeaders = await getAuthHeaders();
                 const apiResponse = await fetch('http://127.0.0.1:8000/api/analyze', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
+                    headers: apiHeaders,
                     body: JSON.stringify(apiPayload)
                 });
 
@@ -708,10 +794,10 @@ async function openFBACalculator() {
         const productData = scraper.extractProductData();
 
         // Detect marketplace and currency
-        const url = window.location.href;
-        const isEgypt = url.includes('amazon.eg');
-        const currency = isEgypt ? 'EGP' : 'USD';
-        const marketplace = isEgypt ? 'amazon.eg' : 'amazon.com';
+        const marketplace = getMarketplace();
+        const mc = new MarketConstants(marketplace);
+        const currency = mc.getCurrency();
+        const isEgypt = marketplace === 'amazon.eg';
 
         // Get fees from backend
         let fulfillmentFee = 0;
@@ -729,9 +815,10 @@ async function openFBACalculator() {
                 is_fba: true
             };
 
+            const apiHeaders = await getAuthHeaders();
             const response = await fetch('http://127.0.0.1:8000/api/analyze', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                headers: apiHeaders,
                 body: JSON.stringify(apiPayload)
             });
 
@@ -807,7 +894,7 @@ async function openFBACalculator() {
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <label style="font-size: 13px; color: #cbd5e1; font-weight: 500;">${t('Taxes')}</label>
                                 <div style="display: flex; align-items: center; gap: 6px;">
-                                    <input type="number" id="calc-tax-percent" value="${isEgypt ? 14 : 0}" step="0.1" min="0" max="100" style="width: 80px; padding: 8px 12px; border: 1px solid #475569; border-radius: 8px; background: #0f172a; color: white; font-size: 13px; text-align: right; outline: none;">
+                                    <input type="number" id="calc-tax-percent" value="${marketplace === 'amazon.eg' ? 14 : (marketplace === 'amazon.sa' ? 15 : (marketplace === 'amazon.ae' ? 5 : 0))}" step="0.1" min="0" max="100" style="width: 80px; padding: 8px 12px; border: 1px solid #475569; border-radius: 8px; background: #0f172a; color: white; font-size: 13px; text-align: right; outline: none;">
                                     <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">%</span>
                                 </div>
                             </div>
@@ -922,9 +1009,10 @@ async function openFBACalculator() {
             const monthlySales = parseInt(document.getElementById('calc-monthly-sales').value) || 0;
 
             try {
+                const apiHeaders = await getAuthHeaders();
                 const response = await fetch('http://127.0.0.1:8000/api/fees/calculate-profit', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    headers: apiHeaders,
                     body: JSON.stringify({
                         marketplace: calcData.marketplace,
                         selling_price: sellingPrice,
@@ -1051,7 +1139,7 @@ function showSearchAuthAlert() {
         padding: 20px 24px;
         border-radius: 12px;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
-        z-index: 1000000;
+        z-index: 9999;
         font-family: 'Inter', sans-serif;
         max-width: 380px;
         direction: ${isArabic ? 'rtl' : 'ltr'};
@@ -1104,6 +1192,19 @@ async function initializeSearchAnalyzer() {
         }
     } catch (e) {
         console.warn('Failed to fetch settings for search analyzer:', e);
+    }
+    
+    // Check if current marketplace is enabled
+    const marketplace = getMarketplace();
+    const suffix = getMarketplaceSuffix(marketplace);
+    const enabledKey = `marketplace_${suffix}_enabled`;
+    const isMarketplaceEnabled = settings[enabledKey] !== undefined
+        ? (settings[enabledKey] === true || settings[enabledKey] === 'true' || settings[enabledKey] === 1 || settings[enabledKey] === '1')
+        : true;
+    
+    if (!isMarketplaceEnabled) {
+        console.log(`Marketplace ${marketplace} is disabled in settings. Aborting search analyzer injection.`);
+        return;
     }
     
     injectSearchAnalyzerButton(settings);
@@ -1169,8 +1270,12 @@ function injectSearchAnalyzerButton(settings = {}) {
         ? (settings.feature_keyword_magnet_enabled === true || settings.feature_keyword_magnet_enabled === 'true' || settings.feature_keyword_magnet_enabled === 1 || settings.feature_keyword_magnet_enabled === '1')
         : true;
 
-    if (!isMarketAnalysisEnabled && !isKeywordMagnetEnabled) {
-        console.log('Both search page analysis features are disabled by admin');
+    const isGoogleKeywordPlannerEnabled = settings.feature_google_keyword_planner_enabled !== undefined
+        ? (settings.feature_google_keyword_planner_enabled === true || settings.feature_google_keyword_planner_enabled === 'true' || settings.feature_google_keyword_planner_enabled === 1 || settings.feature_google_keyword_planner_enabled === '1')
+        : true;
+
+    if (!isMarketAnalysisEnabled && !isKeywordMagnetEnabled && !isGoogleKeywordPlannerEnabled) {
+        console.log('All search page analysis features are disabled by admin');
         return;
     }
 
@@ -1300,6 +1405,51 @@ function injectSearchAnalyzerButton(settings = {}) {
     if (isKeywordMagnetEnabled) {
         container.appendChild(magnetBtn);
     }
+    if (isGoogleKeywordPlannerEnabled) {
+        // Create the Google Keyword Planner button
+        const googleBtn = document.createElement('button');
+        googleBtn.id = 'google-keyword-planner-btn';
+        googleBtn.style.cssText = `
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            color: white;
+            border: 1px solid #334155;
+            padding: 10px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(15, 23, 42, 0.35);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            white-space: nowrap;
+            flex-shrink: 0;
+        `;
+        googleBtn.innerHTML = `
+            <span style="font-size: 18px;">💡</span>
+            <span>${isArabic ? 'توقع الكلمات' : 'Google Planner'}</span>
+        `;
+
+        googleBtn.addEventListener('mouseenter', () => {
+            googleBtn.style.transform = 'translateY(-2px)';
+            googleBtn.style.boxShadow = '0 6px 20px rgba(15, 23, 42, 0.5)';
+            googleBtn.style.background = '#1e293b';
+        });
+
+        googleBtn.addEventListener('mouseleave', () => {
+            googleBtn.style.transform = 'scale(1)';
+            googleBtn.style.background = '#0f172a';
+            googleBtn.style.boxShadow = '0 4px 15px rgba(15, 23, 42, 0.35)';
+        });
+
+        googleBtn.addEventListener('click', () => {
+            triggerGoogleKeywordPlannerForSearch();
+        });
+
+        container.appendChild(googleBtn);
+    }
     container.appendChild(description);
 
     // Find the search results container and inject above it
@@ -1327,7 +1477,7 @@ function injectSearchAnalyzerButton(settings = {}) {
                     position: fixed;
                     right: 20px;
                     top: 120px;
-                    z-index: 999999;
+                    z-index: 9999;
                     flex-direction: column;
                 `;
                 document.body.appendChild(container);
@@ -1359,7 +1509,7 @@ async function analyzeSearchPage() {
         color: white;
         padding: 30px 40px;
         border-radius: 12px;
-        z-index: 999999;
+        z-index: 9999;
         text-align: center;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     `;
@@ -1479,7 +1629,7 @@ async function analyzeSearchPage() {
         updateLoadingMessage('Calculating search volume...');
 
         // Send to backend for calculation
-        const marketplace = window.location.hostname.includes('.eg') ? 'amazon.eg' : 'amazon.com';
+        const marketplace = getMarketplace();
 
         // Send all products (do not filter out those without sales/bsr to match fetched count)
         const productsWithData = products;
@@ -1497,12 +1647,10 @@ async function analyzeSearchPage() {
 
         console.log('Sending to backend:', apiPayload);
 
+        const apiHeaders = await getAuthHeaders();
         const response = await fetch('http://127.0.0.1:8000/api/search-volume/estimate', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
+            headers: apiHeaders,
             body: JSON.stringify(apiPayload)
         });
 
@@ -2115,14 +2263,24 @@ async function saveCurrentProductToList() {
         return;
     }
 
+    const host = window.location.hostname.replace('www.', '');
+    const mc = new MarketConstants(host);
+    const currency = mc.getCurrency();
+
     const itemData = {
         asin:         productData.asin,
         title:        productData.title || '',
         price:        parseFloat(productData.price) || 0,
-        bsr:          parseInt(productData.bsr) || 0,
+        currency:     currency,
+        bsr:          productData.bsr ? (parseInt(productData.bsr.rank || productData.bsr) || 0) : 0,
         rating:       parseFloat(productData.rating) || 0,
         rating_count: parseInt(productData.reviewCount) || 0,
-        marketplace:  window.location.hostname,
+        marketplace:  host,
+        brand:        productData.brand || '',
+        category:     productData.category || (productData.bsr ? productData.bsr.category : 'default'),
+        seller_count: parseInt(productData.sellerCount) || 1,
+        image:        productData.images && productData.images.length > 0 ? productData.images[0] : '',
+        url:          window.location.href,
     };
 
     chrome.runtime.sendMessage({ action: 'getAuth' }, (response) => {
@@ -2167,3 +2325,60 @@ new MutationObserver(() => {
 document.addEventListener('open-fba-calculator', () => {
     openFBACalculator();
 });
+
+// Google Keyword Planner trigger functions
+function triggerGoogleKeywordPlannerForProduct() {
+    try {
+        const scraper = new DataScraper(document);
+        const data = scraper.extractProductData() || {};
+        
+        const asin = data.asin || '';
+        const bsr = data.bsr ? parseInt(data.bsr.rank || data.bsr) : 0;
+        const sales = parseInt(data.monthlySales) || 0;
+        
+        let cat = 'default';
+        if (data.category) {
+            cat = data.category;
+        } else if (data.bsr && data.bsr.category) {
+            cat = data.bsr.category;
+        }
+        const category = encodeURIComponent(cat);
+        const marketplace = getMarketplace();
+        const keyword = (data.title || '').trim().substring(0, 50);
+
+        if (typeof GooglePlannerUI !== 'undefined') {
+            const ui = new GooglePlannerUI();
+            ui.open({ asin, bsr, sales, category: cat, marketplace, keyword });
+        } else {
+            // Fallback if UI module not loaded
+            const url = `http://127.0.0.1:8000/admin/google-keyword-planner?asin=${asin}&bsr=${bsr}&sales=${sales}&category=${category}&marketplace=${marketplace}&keyword=${encodeURIComponent(keyword)}`;
+            window.open(url, '_blank');
+        }
+    } catch (e) {
+        console.error('Failed to trigger Google Keyword Planner for product', e);
+        alert('Could not gather product details to open keyword planner.');
+    }
+}
+
+function triggerGoogleKeywordPlannerForSearch() {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        let query = urlParams.get('k') || urlParams.get('field-keywords') || '';
+        if (!query) {
+            query = document.getElementById('twotabsearchtextbox')?.value || '';
+        }
+        const marketplace = getMarketplace();
+        
+        if (typeof GooglePlannerUI !== 'undefined') {
+            const ui = new GooglePlannerUI();
+            ui.open({ keyword: query.trim(), marketplace });
+        } else {
+            // Fallback if UI module not loaded
+            const url = `http://127.0.0.1:8000/admin/google-keyword-planner?keyword=${encodeURIComponent(query.trim())}&marketplace=${marketplace}`;
+            window.open(url, '_blank');
+        }
+    } catch (e) {
+        console.error('Failed to trigger Google Keyword Planner for search', e);
+        alert('Could not gather search query to open keyword planner.');
+    }
+}
